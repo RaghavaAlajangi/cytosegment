@@ -5,7 +5,7 @@ venv/
 data/
 
 # Experiment output: Models and reports
-experiments/
+src/experiments/
 
 
 # Byte-compiled / optimized / DLL files
