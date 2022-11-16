@@ -1,0 +1,15 @@
+# virtualenv
+venv/
+
+# Training data
+data/
+
+# Experiment output: Models and reports
+experiments/
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+.ipynb
+.idea/

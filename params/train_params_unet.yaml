@@ -1,0 +1,5 @@
+criterion:
+    type: 'FocalTverskyLoss'
+        alpha: 0.3
+        beta: 0.7
+        gamma: 0.75

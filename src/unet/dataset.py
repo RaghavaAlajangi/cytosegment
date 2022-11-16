@@ -1,0 +1,77 @@
+import albumentations as A
+import h5py
+from torch import from_numpy
+from torch.utils.data import Dataset, random_split
+
+from .labelme_utils import json_to_mask
+
+
+class UNetDataset(Dataset):
+    def __init__(self, images, masks,
+                 augment=False, mean=None, std=None):
+        self.images = images
+        self.masks = masks
+        self.augment = augment
+        self.mean = [0.] if mean is None else mean
+        self.std = [1.] if std is None else std
+
+    @classmethod
+    def from_hdf5_data(cls, hdf5_file, augment=False, mean=None,
+                       std=None, num_samples=None):
+        hdf5_ds = h5py.File(hdf5_file)['events']
+        ds_len = len(hdf5_ds['image'])
+        num_samples = num_samples if num_samples else ds_len
+        images = hdf5_ds['image'][:num_samples]
+        masks = hdf5_ds['unet_mask'][:num_samples]
+        return cls(images, masks, augment, mean, std)
+
+    @classmethod
+    def from_json_files(cls, json_list, augment=False, mean=None,
+                        std=None, num_samples=None):
+        images, masks = json_to_mask(json_list)
+
+        len_images = len(images)
+        num_samples = num_samples if num_samples else len_images
+        images = images[:num_samples]
+        masks = masks[:num_samples]
+        return cls(images, masks, augment, mean, std)
+
+    @staticmethod
+    def min_max_norm(img):
+        return (img - img.min()) / (img.max() - img.min())
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, index):
+        img = self.images[index]
+        msk = self.masks[index]
+        img = self.min_max_norm(img)
+        msk = msk / msk.max()  # Make sure mask is binary
+        if self.augment:
+            compose_obj = A.Compose([
+                A.Rotate(7, border_mode=4, p=0.5),
+                A.HorizontalFlip(p=0.3),
+                A.VerticalFlip(p=0.3),
+                A.Normalize(self.mean, self.std, max_pixel_value=1.0)
+            ])
+        else:
+            compose_obj = A.Compose([
+                A.Normalize(self.mean, self.std, max_pixel_value=1.0)
+            ])
+        transformed = compose_obj(image=img, mask=msk)
+        img_tensor = from_numpy(transformed['image'])
+        mask_tensor = from_numpy(transformed['mask'])
+        # Adding extra channel [H, W] --> [1, H, W]
+        img_tensor = img_tensor.unsqueeze(0)
+        return img_tensor, mask_tensor
+
+
+def split_dataset(dataset_object, valid_size=0.2):
+    len_dataset = dataset_object.__len__()
+    valid_data_size = int(valid_size * len_dataset)
+    train_data_size = int(len_dataset - valid_data_size)
+    train_data, valid_data = random_split(dataset_object,
+                                          [train_data_size, valid_data_size])
+    data = {'train': train_data, 'valid': valid_data}
+    return data
