@@ -48,7 +48,7 @@ class Up(nn.Module):
         # if bilinear, use the normal convolutions to reduce the number of
         # channels
         if bilinear:
-            self.up = nn.Upsample(scale_factor=2, mode='bilinear',
+            self.up = nn.Upsample(scale_factor=2, mode="bilinear",
                                   align_corners=True)
             self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
         else:

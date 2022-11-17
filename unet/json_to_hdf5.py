@@ -7,7 +7,7 @@ import numpy as np
 from labelme_utils import json_to_mask
 
 
-def create_hdf5(images, masks, filename='segment_dataset.hdf5'):
+def create_hdf5(images, masks, filename="segment_dataset.hdf5"):
     compression = "gzip"
     with h5py.File(filename, "a") as h:
         imset = h.create_dataset(name="events/image",
@@ -16,10 +16,10 @@ def create_hdf5(images, masks, filename='segment_dataset.hdf5'):
                                  dtype=np.array(images).dtype,
                                  compression=compression
                                  )
-        imset.attrs.create('CLASS', 'IMAGE', dtype='S6')
-        imset.attrs.create('IMAGE_SUBCLASS', 'IMAGE_GRAYSCALE', dtype='S16')
-        imset.attrs.create('IMAGE_VERSION', '1.2', dtype='S4')
-        imset.attrs.create('INTERLACE_MODE', 'INTERLACE_PIXEL', dtype='S16')
+        imset.attrs.create("CLASS", "IMAGE", dtype="S6")
+        imset.attrs.create("IMAGE_SUBCLASS", "IMAGE_GRAYSCALE", dtype="S16")
+        imset.attrs.create("IMAGE_VERSION", "1.2", dtype="S4")
+        imset.attrs.create("INTERLACE_MODE", "INTERLACE_PIXEL", dtype="S16")
 
         mset = h.create_dataset(name="events/mask",
                                 data=np.array(masks),
@@ -27,10 +27,10 @@ def create_hdf5(images, masks, filename='segment_dataset.hdf5'):
                                 dtype=np.array(masks).dtype,
                                 compression=compression
                                 )
-        mset.attrs.create('CLASS', 'IMAGE', dtype='S6')
-        mset.attrs.create('IMAGE_SUBCLASS', 'IMAGE_GRAYSCALE', dtype='S16')
-        mset.attrs.create('IMAGE_VERSION', '1.2', dtype='S4')
-        mset.attrs.create('INTERLACE_MODE', 'INTERLACE_PIXEL', dtype='S16')
+        mset.attrs.create("CLASS", "IMAGE", dtype="S6")
+        mset.attrs.create("IMAGE_SUBCLASS", "IMAGE_GRAYSCALE", dtype="S16")
+        mset.attrs.create("IMAGE_VERSION", "1.2", dtype="S4")
+        mset.attrs.create("INTERLACE_MODE", "INTERLACE_PIXEL", dtype="S16")
 
 
 @click.command(help="This script helps to create HDF5 file from "
@@ -51,13 +51,13 @@ def main(path_in, path_out=None):
         path_out = path_in.with_name("segm_dataset.hdf5")
 
     # Get the JSON files in the path_in folder
-    json_files = [p for p in Path(path_in).rglob('*.json') if p.is_file()]
+    json_files = [p for p in Path(path_in).rglob("*.json") if p.is_file()]
     # Create images and masks out of json files
     images, masks = json_to_mask(json_files)
     # Create final hdf5 file
     create_hdf5(images, masks, filename=path_out)
-    print('HDF5 file is created!')
+    print("HDF5 file is created!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

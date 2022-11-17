@@ -1,0 +1,28 @@
+# These two dicts are created based on bloody_bunny models predictions
+class_to_id = {"ml_score_rst": 0,
+               "ml_score_r1f": 1,
+               "ml_score_r1u": 2,
+               "ml_score_r20": 3,
+               "ml_score_rn0": 4,
+               "ml_score_l10": 5,
+               "ml_score_g1n": 6,
+               "ml_score_g1e": 7,
+               "ml_score_g1b": 8,
+               "ml_score_g1m": 9,
+               "ml_score_t1a": 10,
+               "ml_score_r1n": 11,
+               }
+
+id_to_class = {0: "ml_score_rst",
+               1: "ml_score_r1f",
+               2: "ml_score_r1u",
+               3: "ml_score_r20",
+               4: "ml_score_rn0",
+               5: "ml_score_l10",
+               6: "ml_score_g1n",
+               7: "ml_score_g1e",
+               8: "ml_score_g1b",
+               9: "ml_score_g1m",
+               10: "ml_score_t1a",
+               11: "ml_score_r1n",
+               }

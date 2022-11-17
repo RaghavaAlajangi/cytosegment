@@ -30,7 +30,7 @@ class ToTensorMinMax(object):
 
 
 def load_model(ckp_path_jit, use_cuda=True):
-    device = torch.device('cuda' if use_cuda else 'cpu')
+    device = torch.device("cuda" if use_cuda else "cpu")
     model_jit = torch.jit.load(ckp_path_jit, map_location=device)
     model_jit.eval()
     model_jit = torch.jit.optimize_for_inference(model_jit)
@@ -56,9 +56,12 @@ def extract_patch_tensors(image_corr, masks):
         M = measure.moments(m)
         px = M[0, 1] / M[0, 0]
         py = M[1, 0] / M[0, 0]
+        # Apply transform --> get the org image tensor
         trans_img_corr = transform(image_corr)
         trans_img_corr = trans_img_corr.squeeze(0)
+        # Crop the org img tensor into patches based on coords
         patch_tensor = crop_image(trans_img_corr, (px, py))
+        # Add an extra channel [H, W] --> [1, H, W]
         patch_tensor = patch_tensor.unsqueeze(0)
         patch_tensors.append(patch_tensor)
     return patch_tensors
@@ -66,10 +69,10 @@ def extract_patch_tensors(image_corr, masks):
 
 def extract_masks_polygons(unet_pred):
     polygons = measure.find_contours(unet_pred, 0.2,
-                                     fully_connected='low',
-                                     positive_orientation='high')
+                                     fully_connected="low",
+                                     positive_orientation="high")
 
-    pred_bin = (unet_pred > 0.4).astype('int8')
+    pred_bin = (unet_pred > 0.4).astype("int8")
     segm, num = measure.label(pred_bin, background=0, return_num=True)
     masks = []
     for n in range(num):
@@ -87,11 +90,11 @@ def get_unet_prediction(image, model, use_cuda=True,
     std = [0.1342] if std is None else std
     mean = [0.6735] if mean is None else std
 
-    device = torch.device('cuda' if use_cuda else 'cpu')
+    device = torch.device("cuda" if use_cuda else "cpu")
     image = min_max_norm(image)
     compose_obj = A.Compose([A.Normalize(mean, std, max_pixel_value=1.)])
     transformed = compose_obj(image=image)
-    img_tensor = from_numpy(transformed['image'])
+    img_tensor = from_numpy(transformed["image"])
     im_ten = img_tensor.unsqueeze(0).unsqueeze(0)
     im_ten = im_ten.to(device)
     pred = model(im_ten)
@@ -100,8 +103,9 @@ def get_unet_prediction(image, model, use_cuda=True,
 
 
 def get_bnet_predictions(patches, mnet, use_cuda=True):
-    device = torch.device('cuda' if use_cuda else 'cpu')
-    # Concatenate list of patches into batch
+    device = torch.device("cuda" if use_cuda else "cpu")
+    # Stack list of patches into batch
+    # [(1, 80, 80), (1, 80, 80)] --> [2, 1, 80, 80]
     min_patch_batch = torch.stack(patches, dim=0)
     input_tensor = min_patch_batch.to(device)
     output = mnet(input_tensor)
@@ -120,7 +124,7 @@ def get_bnet_predictions(patches, mnet, use_cuda=True):
                               dir_okay=False,
                               resolve_path=True,
                               path_type=Path),
-              help="Path to RTDC dataset")
+              help="Path to RTDC dataset (.rtdc)")
 @click.option("--path_out",
               type=click.Path(dir_okay=True,
                               writable=True,
@@ -142,7 +146,7 @@ def get_bnet_predictions(patches, mnet, use_cuda=True):
 @click.option("--kwrags", "-k",
               multiple=True,
               required=True,
-              help="KEY=VALUE argument for cell_type and num_samples"
+              help="KEY=VALUE argument for cell_type and num_samples "
                    "that needs to be extracted from RTDC dataset")
 @click.option("--is_cuda", "-c", is_flag=True,
               help="Specify whether cuda device available or not")
@@ -180,10 +184,10 @@ def main(path_in, path_out, bb_ckp_path,
             counter = 0
             for idx in random.sample(range(0, len(feat_idx)),
                                      len(feat_idx) - 1):
-                img = rtdc_ds['image'][idx]
-                img_bg = rtdc_ds['image_bg'][idx]
-                frm = rtdc_ds['frame'][idx]
-                ido = rtdc_ds['index_online'][idx]
+                img = rtdc_ds["image"][idx]
+                img_bg = rtdc_ds["image_bg"][idx]
+                frm = rtdc_ds["frame"][idx]
+                ido = rtdc_ds["index_online"][idx]
 
                 # Create img_corr feature
                 img_cor = np.array(img, dtype=int) - img_bg + img_bg.mean()
@@ -204,12 +208,12 @@ def main(path_in, path_out, bb_ckp_path,
                 cell_labels = [id_to_class[i] for i in cell_preds]
 
                 # Create img_path with dataset name, frameNum, and indexNum
-                img_path = path_labelme / f'{DS_NAME}_frm_{int(frm)}' \
-                                          f'_idx_{int(ido)}_img.png'
+                img_path = path_labelme / f"{DS_NAME}_frm_{int(frm)}" \
+                                          f"_idx_{int(ido)}_img.png"
 
                 # Create img_bg_path with dataset name, frameNum, and indexNum
-                img_bg_path = path_image_bg / f'{DS_NAME}_frm_{int(frm)}' \
-                                              f'_idx_{int(ido)}_img_bg.png'
+                img_bg_path = path_image_bg / f"{DS_NAME}_frm_{int(frm)}" \
+                                              f"_idx_{int(ido)}_img_bg.png"
 
                 # Save image_bg
                 cv2.imwrite(str(img_bg_path), img_bg)
@@ -224,5 +228,5 @@ def main(path_in, path_out, bb_ckp_path,
                     break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

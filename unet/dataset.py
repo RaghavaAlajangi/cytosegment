@@ -1,7 +1,9 @@
+from pathlib import Path
+
 import albumentations as A
 import h5py
 from torch import from_numpy
-from torch.utils.data import Dataset, random_split
+from torch.utils.data import Dataset, DataLoader, random_split
 
 from .labelme_utils import json_to_mask
 
@@ -18,16 +20,17 @@ class UNetDataset(Dataset):
     @classmethod
     def from_hdf5_data(cls, hdf5_file, augment=False, mean=None,
                        std=None, num_samples=None):
-        hdf5_ds = h5py.File(hdf5_file)['events']
-        ds_len = len(hdf5_ds['image'])
+        hdf5_ds = h5py.File(hdf5_file)["events"]
+        ds_len = len(hdf5_ds["image"])
         num_samples = num_samples if num_samples else ds_len
-        images = hdf5_ds['image'][:num_samples]
-        masks = hdf5_ds['unet_mask'][:num_samples]
+        images = hdf5_ds["image"][:num_samples]
+        masks = hdf5_ds["unet_mask"][:num_samples]
         return cls(images, masks, augment, mean, std)
 
     @classmethod
-    def from_json_files(cls, json_list, augment=False, mean=None,
+    def from_json_files(cls, json_path, augment=False, mean=None,
                         std=None, num_samples=None):
+        json_list = [p for p in Path(json_path).rglob("*.json") if p.is_file()]
         images, masks = json_to_mask(json_list)
 
         len_images = len(images)
@@ -60,9 +63,9 @@ class UNetDataset(Dataset):
                 A.Normalize(self.mean, self.std, max_pixel_value=1.0)
             ])
         transformed = compose_obj(image=img, mask=msk)
-        img_tensor = from_numpy(transformed['image'])
-        mask_tensor = from_numpy(transformed['mask'])
-        # Adding extra channel [H, W] --> [1, H, W]
+        img_tensor = from_numpy(transformed["image"])
+        mask_tensor = from_numpy(transformed["mask"])
+        # Add an extra channel [H, W] --> [1, H, W]
         img_tensor = img_tensor.unsqueeze(0)
         return img_tensor, mask_tensor
 
@@ -73,5 +76,15 @@ def split_dataset(dataset_object, valid_size=0.2):
     train_data_size = int(len_dataset - valid_data_size)
     train_data, valid_data = random_split(dataset_object,
                                           [train_data_size, valid_data_size])
-    data = {'train': train_data, 'valid': valid_data}
+    data = {"train": train_data, "valid": valid_data}
     return data
+
+
+def unet_data_loaders(data_dict, batch_size, num_workers=None):
+    data_load_dict = dict()
+    for m in data_dict.keys():
+        data_load_dict[m] = DataLoader(data_dict[m],
+                                       batch_size=batch_size,
+                                       num_workers=num_workers,
+                                       shuffle=True)
+    return data_load_dict

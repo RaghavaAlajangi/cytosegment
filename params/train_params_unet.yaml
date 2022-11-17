@@ -1,5 +1,48 @@
+model:
+  type: "UNet"
+  in_channels: 1
+  out_classes: 1
+  bilinear: False
+
+data:
+  type: "JSON"
+  data_path: C:\Raghava_local\BENCHMARK_DATA\test
+  augmentation: False
+  valid_size: 0.2
+  batch_size: 8
+  mean: [ 0.6735 ]
+  std: [ 0.1342 ]
+  num_workers: 0
+
 criterion:
-    type: 'FocalTverskyLoss'
-        alpha: 0.3
-        beta: 0.7
-        gamma: 0.75
+  type: "FocalTverskyLoss"
+  alpha: 0.3
+  beta: 0.7
+  gamma: 0.75
+
+metric:
+  type: "IoUCoeff"
+
+optimizer:
+  type: "Adam"
+
+scheduler:
+  type: "stepLR"
+  lr_step_size: 10
+
+learn_rate: 0.001
+max_epochs: 3
+use_cuda: True
+path_out: "unet_test"
+
+# Trainer saves checkpoints only if validation
+# accuracy is greater than  'min_ckp_acc'
+min_ckp_acc: 0.85
+
+# If the model is not improving for consequent
+# 10 epochs (patience) training will be terminated automatically
+early_stop_patience: 10
+
+# Start the training where you left by providing
+# previous original checkpoint (not jit) path
+init_from_ckp: null

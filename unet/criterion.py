@@ -80,7 +80,7 @@ class DiceBCELoss(nn.Module):
         intersection = (inputs * targets).sum()
         dice_loss = 1 - (2. * intersection + self.eps) / (
                 inputs.sum() + targets.sum() + self.eps)
-        BCE = F.binary_cross_entropy(inputs, targets, reduction='mean')
+        BCE = F.binary_cross_entropy(inputs, targets, reduction="mean")
         Dice_BCE = BCE + dice_loss
 
         return Dice_BCE
@@ -147,7 +147,7 @@ class FocalLoss(nn.Module):
         targets = targets.view(-1)
 
         # first compute binary cross-entropy
-        BCE = F.binary_cross_entropy(inputs, targets, reduction='mean')
+        BCE = F.binary_cross_entropy(inputs, targets, reduction="mean")
         BCE_EXP = torch.exp(-BCE)
         focal_loss = self.alpha * (1 - BCE_EXP) ** self.gamma * BCE
 

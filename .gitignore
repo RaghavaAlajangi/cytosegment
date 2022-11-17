@@ -13,3 +13,7 @@ __pycache__/
 
 .ipynb
 .idea/
+
+unet_test/
+
+test_init.py

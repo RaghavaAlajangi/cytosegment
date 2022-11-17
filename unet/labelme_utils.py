@@ -42,12 +42,12 @@ def json_to_mask(json_list):
             height, width = image.shape
             temp_mask = []
             for cell in cells:
-                poly = [tuple(x) for x in cell['points']]
-                dummy = Image.new('L', (width, height), 0)
+                poly = [tuple(x) for x in cell["points"]]
+                dummy = Image.new("L", (width, height), 0)
                 ImageDraw.Draw(dummy).polygon(poly, outline=1, fill=1)
                 msk = np.array(dummy)
                 temp_mask.append(msk)
-            mask = np.sum(temp_mask, axis=0, dtype='float32')
+            mask = np.sum(temp_mask, axis=0, dtype="float32")
         images.append(image)
         masks.append(mask)
     return images, masks
@@ -79,7 +79,7 @@ def create_json(img, cnts, cell_labels, img_file_path,
         x, y = cnt[:, 1] + x_off, cnt[:, 0] + y_off
 
         # Interpolate x, y coords to find the smooth curve
-        warnings.filterwarnings('error')
+        warnings.filterwarnings("error")
         with warnings.catch_warnings(record=True) as _:
             warnings.simplefilter("always")
             tck = interpolate.splprep([x, y], k=2, s=0.4, per=True)[0]
@@ -112,12 +112,12 @@ def create_json(img, cnts, cell_labels, img_file_path,
                 if np.any(xi > 248) or np.any(xi < 2):
                     xi[xi < 2] = 0.0
                     xi[xi > 248] = 249.0
-                    cell_lbl = cell_lbl + '_invalid'
+                    cell_lbl = cell_lbl + "_invalid"
                 shape = get_labeme_shape(xi, yi, cell_lbl)
                 shapes_list.append(shape)
 
     image_data = img_arr_to_b64(img).decode("utf-8")
-    json_file = str(img_file_path).replace('.png', '.json')
+    json_file = str(img_file_path).replace(".png", ".json")
 
     # Create labelme json object
     json_dict = {"version": "5.0.1",
