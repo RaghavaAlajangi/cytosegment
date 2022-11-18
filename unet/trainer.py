@@ -1,3 +1,4 @@
+import datetime
 import json
 from pathlib import Path
 
@@ -10,15 +11,12 @@ import yaml
 
 from .criterion import FocalTverskyLoss
 from .dataset import UNetDataset, split_dataset
-from .early_stop_cb import EarlyStopping
+from .early_stopping import EarlyStopping
 from .eval_metrics import IoUCoeff
 from .models import UNet
 
 
 class SetTrainer:
-    """
-
-    """
     def __init__(self,
                  model,
                  data_dict,
@@ -33,7 +31,7 @@ class SetTrainer:
                  lr_step_size=15,
                  min_ckp_acc=0.85,
                  early_stop_patience=10,
-                 path_out="unet_results",
+                 path_out="experiments",
                  num_workers=None,
                  init_from_ckp=None,
                  ):
@@ -67,8 +65,10 @@ class SetTrainer:
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
 
-        if self.path_out:
-            self.path_out.mkdir(parents=True, exist_ok=True)
+        # Create a folder to store experiment results
+        nowtime = datetime.datetime.now().strftime('%d-%m-%Y [%H.%M.%S]')
+        self.nowtime_path = self.path_out / nowtime
+        self.nowtime_path.mkdir(parents=True, exist_ok=True)
 
     @classmethod
     def with_params(cls, params_file_path):
@@ -192,7 +192,7 @@ class SetTrainer:
         return loss_avg, acc_avg
 
     def plot_save_logs(self, logs):
-        with open(self.path_out / "train_logs.json", "w") as fp:
+        with open(self.nowtime_path / "train_logs.json", "w") as fp:
             json.dump(logs, fp)
 
         epoch = logs["epochs"]
@@ -223,7 +223,7 @@ class SetTrainer:
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.grid()
-        plt.savefig(self.path_out / "train_plot.png")
+        plt.savefig(self.nowtime_path / "train_plot.png")
         plt.show()
 
     def print_train_logs(self, epoch_log):
@@ -234,13 +234,13 @@ class SetTrainer:
 
     def save_checkpoint(self, new_ckp, mode="jit"):
         if mode == "jit":
-            jit_fold = self.path_out / "torch_jit"
+            jit_fold = self.nowtime_path / "torch_jit"
             jit_fold.mkdir(parents=True, exist_ok=True)
             jit_path = jit_fold / "torch_jit" / new_ckp + "_jit.ckp"
             model_scripted = torch.jit.script(self.model)
             model_scripted.save(jit_path)
         else:
-            torch_fold = self.path_out / "torch_norm"
+            torch_fold = self.nowtime_path / "torch_norm"
             torch_fold.mkdir(parents=True, exist_ok=True)
             org_path = torch_fold / "torch_norm" / new_ckp + "_org.ckp"
             torch.save({"model_state_dict": self.model.state_dict(),

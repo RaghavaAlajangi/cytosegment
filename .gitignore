@@ -3,17 +3,13 @@ venv/
 
 # Training data
 data/
-
-# Experiment output: Models and reports
-src/experiments/
+experiments/
 
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 
 .ipynb
 .idea/
-
-unet_test/
 
 test_init.py

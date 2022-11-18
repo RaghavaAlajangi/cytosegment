@@ -21,7 +21,7 @@ AUGMENT = False
 # on benchmark_version3.hdf5
 MEAN = [0.6735]
 STD = [0.1342]
-NUM_WORKERS = 8
+NUM_WORKERS = 0
 
 # Optimizer
 OPIMIZER_NAME = "Adam"
@@ -43,14 +43,13 @@ MIN_CKP_ACC = 0.85
 
 NUM_SAMPLES = 500  # can be used for testing
 USE_CUDA = True
-PATH_OUT = "unet_test"
-EXPERIMENT_NAME = "unet_test"
+PATH_OUT = "experiments"
 
 hdf5_path = r"C:\Raghava_local\GITLAB\rtdc-segmentation\data\datasets" \
             r"\benchmark_version3.hdf5"
 json_path = r"C:\Raghava_local\BENCHMARK_DATA\test"
 
-dataset_mode = "JSON"
+dataset_mode = "HDF5"
 
 if dataset_mode == "JSON":
     unet_dataset = UNetDataset.from_json_files(json_path, AUGMENT, MEAN, STD)
@@ -77,12 +76,12 @@ for i in range(2):
     plt.show()
 
 unet_model = UNet(n_channels=IN_CHANNELS, n_classes=OUT_CLASSES)
-loss_function = FocalTverskyLoss(alpha=ALPHA, beta=BETA, gamma=GAMMA)
+criterion = FocalTverskyLoss(alpha=ALPHA, beta=BETA, gamma=GAMMA)
 eval_metric = IoUCoeff()
 
 trainer = SetTrainer(model=unet_model,
                      data_dict=dataDict,
-                     loss_function=loss_function,
+                     criterion=criterion,
                      eval_metric=eval_metric,
                      optimizer_name=OPIMIZER_NAME,
                      scheduler_name=SCHEDULER_NAME,

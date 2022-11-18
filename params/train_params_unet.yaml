@@ -33,7 +33,7 @@ scheduler:
 learn_rate: 0.001
 max_epochs: 3
 use_cuda: True
-path_out: "unet_test"
+path_out: "experiments"
 
 # Trainer saves checkpoints only if validation
 # accuracy is greater than  'min_ckp_acc'

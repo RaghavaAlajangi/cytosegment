@@ -3,7 +3,7 @@ import numpy as np
 
 class EarlyStopping:
     """
-    Early stops the training if validation loss doesn't improve
+    EarlyStopping stops the training if validation loss does not improve
     after a given patience.
     """
     def __init__(self, patience=10):
@@ -11,7 +11,7 @@ class EarlyStopping:
         Parameters
         ----------
         patience: int
-            How long to wait after last time validation loss improved.
+            Epochs to wait until last validation loss improved
             Default: 10
         """
         self.patience = patience

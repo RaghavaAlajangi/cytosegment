@@ -163,6 +163,9 @@ def main(path_in, path_out, bb_ckp_path,
     if path_out is None:
         path_out = path_in.with_name(f"{DS_NAME}_labelme")
         path_out.mkdir(parents=True, exist_ok=True)
+    else:
+        path_out = path_out / f"{DS_NAME}_labelme"
+        path_out.mkdir(parents=True, exist_ok=True)
 
     # Load the models
     bb = load_model(str(bb_ckp_path), use_cuda=is_cuda)
