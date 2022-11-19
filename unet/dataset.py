@@ -24,7 +24,7 @@ class UNetDataset(Dataset):
         ds_len = len(hdf5_ds["image"])
         num_samples = num_samples if num_samples else ds_len
         images = hdf5_ds["image"][:num_samples]
-        masks = hdf5_ds["unet_mask"][:num_samples]
+        masks = hdf5_ds["mask"][:num_samples]
         return cls(images, masks, augment, mean, std)
 
     @classmethod

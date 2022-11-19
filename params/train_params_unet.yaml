@@ -5,13 +5,21 @@ model:
   bilinear: False
 
 data:
-  type: "JSON"
-  data_path: C:\Raghava_local\BENCHMARK_DATA\test
+  type: "HDF5"
+  data_path: data/segm_dataset.hdf5
   augmentation: False
   valid_size: 0.2
   batch_size: 8
-  mean: [ 0.6735 ]
-  std: [ 0.1342 ]
+#  mean: [ 0.6735 ]
+#  std: [ 0.1342 ]
+  # Mean and std values for the whole dataset should be computed before
+  # starting the training using 'unet/dataset_utils/compute_mean_std.py'
+  # script. The computed values can be used during the model inference.
+  # If there is a change in the dataset (either inclusion or exclusion of
+  # image and mask pairs into the dataset), we need to recalculate the mean
+  # and std values.
+  mean: [ 0.6795 ]
+  std: [ 0.1417 ]
   num_workers: 0
 
 criterion:
@@ -26,21 +34,27 @@ metric:
 optimizer:
   type: "Adam"
 
+# Decays the learning rate by ``lr_decay_rate``
+# every ``lr_step_size`` epochs.
 scheduler:
   type: "stepLR"
   lr_step_size: 10
+  lr_decay_rate: 0.1
 
 learn_rate: 0.001
-max_epochs: 3
+max_epochs: 100
 use_cuda: True
 path_out: "experiments"
 
 # Trainer saves checkpoints only if validation
 # accuracy is greater than  'min_ckp_acc'
-min_ckp_acc: 0.85
+min_ckp_acc: 0.90
 
-# If the model is not improving for consequent
-# 10 epochs (patience) training will be terminated automatically
+# If the model metric (validation loss) starts increasing,
+# 'early stopping' will count the n consequent epochs (patience).
+# If still there is no improvement (after patience) training will
+# be terminated automatically. It saves computational power by
+# discarding the unnecessary epochs.
 early_stop_patience: 10
 
 # Start the training where you left by providing

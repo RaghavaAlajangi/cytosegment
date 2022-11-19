@@ -29,6 +29,7 @@ class SetTrainer:
                  max_epochs=100,
                  use_cuda=False,
                  lr_step_size=15,
+                 lr_decay_rate=0.1,
                  min_ckp_acc=0.85,
                  early_stop_patience=10,
                  path_out="experiments",
@@ -46,6 +47,7 @@ class SetTrainer:
         self.max_epochs = max_epochs
         self.cuda = use_cuda
         self.lr_step_size = lr_step_size
+        self.lr_decay_rate = lr_decay_rate
         self.path_out = Path(path_out)
         self.min_ckp_acc = min_ckp_acc
         self.num_workers = num_workers
@@ -66,7 +68,7 @@ class SetTrainer:
             self.restore_checkpoint(init_from_ckp)
 
         # Create a folder to store experiment results
-        nowtime = datetime.datetime.now().strftime('%d-%m-%Y [%H.%M.%S]')
+        nowtime = datetime.datetime.now().strftime('%d_%b_%Y_%H%M%S')
         self.nowtime_path = self.path_out / nowtime
         self.nowtime_path.mkdir(parents=True, exist_ok=True)
 
@@ -112,6 +114,7 @@ class SetTrainer:
         scheduler_params = params["scheduler"]
         scheduler_name = scheduler_params["type"]
         lr_step_size = scheduler_params["lr_step_size"]
+        lr_decay_rate = scheduler_params["lr_decay_rate"]
 
         learn_rate = params["learn_rate"]
         max_epochs = params["max_epochs"]
@@ -123,8 +126,8 @@ class SetTrainer:
 
         return cls(model, data_dict, criterion, metric, optimizer_name,
                    scheduler_name, batch_size, learn_rate, max_epochs,
-                   use_cuda, lr_step_size, min_ckp_acc, early_stop_patience,
-                   path_out, num_workers, init_from_ckp)
+                   use_cuda, lr_step_size, lr_decay_rate, min_ckp_acc,
+                   early_stop_patience, path_out, num_workers, init_from_ckp)
 
     def data_loaders(self, data_dict):
         data_load_dict = dict()
@@ -160,12 +163,13 @@ class SetTrainer:
             param.requires_grad = False
 
     def epoch_runner(self, mode):
-        if mode == "train":
+        if mode == 'train':
             self.model.train()
-        if mode == "valid":
+        if mode == 'valid':
             self.model.eval()
         loss_list = []
-        acc_list = []
+        predict_list = []
+        target_list = []
         # Get batch of images and labels iteratively
         for images, labels in self.data_loaders[mode]:
             images = images.to(self.device, dtype=torch.float32)
@@ -173,22 +177,28 @@ class SetTrainer:
             # Zero the parameter gradients
             self.optim.zero_grad()
             # Track history only in train mode
-            with torch.set_grad_enabled(mode == "train"):
+            with torch.set_grad_enabled(mode == 'train'):
                 predicts = self.model(images)
                 # [B, 1, H, W] --> [B, H, W] for loss calculation
                 predicts = predicts.squeeze(1)
                 loss = self.criterion(predicts, labels)
-                accuracy = self.eval_metric(predicts, labels)
                 # Backward + optimize only in train mode
-                if mode == "train":
+                if mode == 'train':
                     loss.backward()
                     self.optim.step()
                 loss_item = loss.item()
                 del loss  # this may be the fix for my OOM error
                 loss_list.append(loss_item)
-                acc_list.append(accuracy)
+
+                predict_list.append(predicts)
+                target_list.append(labels)
+
+        predict_torch = torch.concat(predict_list, dim=0)
+        target_torch = torch.concat(target_list, dim=0)
+
+        scores = self.eval_metric(predict_torch, target_torch)
         loss_avg = float(np.stack(loss_list).mean())
-        acc_avg = float(np.concatenate(acc_list).mean())
+        acc_avg = float(scores.mean())
         return loss_avg, acc_avg
 
     def plot_save_logs(self, logs):
@@ -201,15 +211,17 @@ class SetTrainer:
         val_loss = logs["val_loss"]
         val_acc = logs["val_acc"]
         ckp_epochs = logs["ckp_flag"]
+        early_stop_epoch = logs["early_stop"]
         ckp_val_acc = [val_acc[epoch.index(ep)] for ep in ckp_epochs]
+        ckp_val_loss = [val_loss[epoch.index(ep)] for ep in early_stop_epoch]
 
         plt.figure(figsize=(14, 7), facecolor=(1, 1, 1))
         plt.rc("grid", linestyle="--", color="lightgrey")
         plt.subplot(121)
-        plt.scatter(ckp_epochs, ckp_val_acc, c="blue", s=20,
-                    marker="x", label="Saved_ckp")
         plt.plot(epoch, train_acc, color="red", label="Train accuracy")
         plt.plot(epoch, val_acc, color="green", label="Valid accuracy")
+        plt.scatter(ckp_epochs, ckp_val_acc, c="blue", s=20,
+                    marker="x", label="Saved_ckp")
         plt.legend(loc="lower right")
         plt.title("Accuracy plot")
         plt.xlabel("Epochs")
@@ -218,6 +230,8 @@ class SetTrainer:
         plt.subplot(122)
         plt.plot(epoch, train_loss, color="red", label="Train loss")
         plt.plot(epoch, val_loss, color="green", label="Valid loss")
+        plt.scatter(early_stop_epoch, ckp_val_loss, c="blue", s=20,
+                    marker="x", label="Early_stopping")
         plt.legend(loc="upper right")
         plt.title("Loss plot")
         plt.xlabel("Epochs")
@@ -232,17 +246,17 @@ class SetTrainer:
         print(f"[Train_loss:{train_loss:.4f} | Train_acc:{train_acc:.4f} | "
               f"Val_loss:{val_loss:.4f} | Val_acc:{val_acc:.4f}]")
 
-    def save_checkpoint(self, new_ckp, mode="jit"):
+    def save_checkpoint(self, new_ckp_name, mode="jit"):
         if mode == "jit":
             jit_fold = self.nowtime_path / "torch_jit"
             jit_fold.mkdir(parents=True, exist_ok=True)
-            jit_path = jit_fold / "torch_jit" / new_ckp + "_jit.ckp"
+            jit_path = str(jit_fold) + f"/{new_ckp_name}_jit.ckp"
             model_scripted = torch.jit.script(self.model)
             model_scripted.save(jit_path)
         else:
-            torch_fold = self.nowtime_path / "torch_norm"
+            torch_fold = self.nowtime_path / "torch_original"
             torch_fold.mkdir(parents=True, exist_ok=True)
-            org_path = torch_fold / "torch_norm" / new_ckp + "_org.ckp"
+            org_path = str(torch_fold) + f"/{new_ckp_name}_org.ckp"
             torch.save({"model_state_dict": self.model.state_dict(),
                         "optimizer_state_dict": self.optim.state_dict(),
                         }, org_path)
@@ -255,7 +269,8 @@ class SetTrainer:
                       "train_acc": [],
                       "val_loss": [],
                       "val_acc": [],
-                      "ckp_flag": []
+                      "ckp_flag": [],
+                      "early_stop": []
                       }
         for epoch in range(1, self.max_epochs + 1):
             train_loss, train_acc = self.epoch_runner(mode="train")
@@ -274,14 +289,15 @@ class SetTrainer:
             self.print_train_logs(epoch_log)
 
             if val_acc > self.min_ckp_acc and val_acc == max(val_acc_list):
-                new_ckp = f"/E{epoch}_validAcc_{int(val_acc * 1e4)}"
-                self.save_checkpoint(new_ckp)
+                new_ckp_name = f"/E{epoch}_validAcc_{int(val_acc * 1e4)}"
+                self.save_checkpoint(new_ckp_name)
                 train_logs["ckp_flag"].append(epoch)
 
             if self.scheduler:
                 self.scheduler.step()
             self.early_stop(val_loss)
             if self.early_stop.should_stop:
+                train_logs["early_stop"].append(epoch)
                 print("Early stopping!")
                 break
         self.plot_save_logs(train_logs)

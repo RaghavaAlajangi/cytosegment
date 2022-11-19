@@ -2,6 +2,14 @@ import time
 from datetime import timedelta
 
 from unet.trainer import SetTrainer
+# from unet.dataset_utils import compute_mean_std
+
+
+# hdf5_path = "data/segm_dataset.hdf5"
+# mean, std = compute_mean_std(hdf5_path)
+#
+# print(mean, std)
+
 
 params_path = "params/train_params_unet.yaml"
 

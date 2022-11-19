@@ -159,12 +159,12 @@ def main(path_in, path_out, bb_ckp_path,
     assert len(ml_score_feats) != 0
 
     # Get the dataset name (i.e ../{dataset_name}/M001_data.rtdc)
-    DS_NAME = path_in.parts[-2]
+    ds_name = path_in.parts[-2]
     if path_out is None:
-        path_out = path_in.with_name(f"{DS_NAME}_labelme")
+        path_out = path_in.with_name(f"{ds_name}_labelme")
         path_out.mkdir(parents=True, exist_ok=True)
     else:
-        path_out = path_out / f"{DS_NAME}_labelme"
+        path_out = path_out / f"{ds_name}_labelme"
         path_out.mkdir(parents=True, exist_ok=True)
 
     # Load the models
@@ -211,11 +211,11 @@ def main(path_in, path_out, bb_ckp_path,
                 cell_labels = [id_to_class[i] for i in cell_preds]
 
                 # Create img_path with dataset name, frameNum, and indexNum
-                img_path = path_labelme / f"{DS_NAME}_frm_{int(frm)}" \
+                img_path = path_labelme / f"{ds_name}_frm_{int(frm)}" \
                                           f"_idx_{int(ido)}_img.png"
 
                 # Create img_bg_path with dataset name, frameNum, and indexNum
-                img_bg_path = path_image_bg / f"{DS_NAME}_frm_{int(frm)}" \
+                img_bg_path = path_image_bg / f"{ds_name}_frm_{int(frm)}" \
                                               f"_idx_{int(ido)}_img_bg.png"
 
                 # Save image_bg

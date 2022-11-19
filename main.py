@@ -19,8 +19,12 @@ BATCH_SIZE = 8
 AUGMENT = False
 # Mean and std values are calculated based
 # on benchmark_version3.hdf5
-MEAN = [0.6735]
-STD = [0.1342]
+# MEAN = [0.6735]
+# STD = [0.1342]
+
+MEAN = [0.6795]
+STD = [0.1417]
+
 NUM_WORKERS = 0
 
 # Optimizer
@@ -36,17 +40,16 @@ BETA = 0.7
 GAMMA = 0.75
 
 # Other hyper-parameters
-MAX_EPOCHS = 3
+MAX_EPOCHS = 5
 LEARN_RATE = 0.001
 EARLY_STOP_PATIENCE = 10
-MIN_CKP_ACC = 0.85
+MIN_CKP_ACC = 0.5
 
-NUM_SAMPLES = 500  # can be used for testing
+NUM_SAMPLES = 200  # can be used for testing
 USE_CUDA = True
 PATH_OUT = "experiments"
 
-hdf5_path = r"C:\Raghava_local\GITLAB\rtdc-segmentation\data\datasets" \
-            r"\benchmark_version3.hdf5"
+hdf5_path = "data/segm_dataset.hdf5"
 json_path = r"C:\Raghava_local\BENCHMARK_DATA\test"
 
 dataset_mode = "HDF5"
@@ -55,7 +58,7 @@ if dataset_mode == "JSON":
     unet_dataset = UNetDataset.from_json_files(json_path, AUGMENT, MEAN, STD)
 else:
     unet_dataset = UNetDataset.from_hdf5_data(hdf5_path, AUGMENT, MEAN, STD,
-                                              num_samples=30)
+                                              num_samples=NUM_SAMPLES)
 
 dataDict = split_dataset(unet_dataset, VALID_SIZE)
 
