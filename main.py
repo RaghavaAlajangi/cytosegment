@@ -7,7 +7,7 @@ from unet.models import UNet
 from unet.trainer import SetTrainer
 from unet.dataset import UNetDataset, split_dataset
 from unet.criterion import FocalTverskyLoss
-from unet.eval_metrics import IoUCoeff
+from unet.metrics import IoUCoeff
 
 # model
 IN_CHANNELS = 1

@@ -12,7 +12,7 @@ import yaml
 from .criterion import FocalTverskyLoss
 from .dataset import UNetDataset, split_dataset
 from .early_stopping import EarlyStopping
-from .eval_metrics import IoUCoeff
+from .metrics import IoUCoeff
 from .models import UNet
 
 

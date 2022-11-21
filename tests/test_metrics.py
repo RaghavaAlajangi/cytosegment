@@ -1,6 +1,6 @@
 import numpy as np
 
-from unet.eval_metrics import IoUCoeff
+from unet.metrics import IoUCoeff
 
 from .helper_methods import get_test_tensors
 

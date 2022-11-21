@@ -87,8 +87,8 @@ def min_max_norm(img):
 
 def get_unet_prediction(image, model, use_cuda=True,
                         mean=None, std=None):
-    std = [0.1342] if std is None else std
     mean = [0.6735] if mean is None else std
+    std = [0.1342] if std is None else std
 
     device = torch.device("cuda" if use_cuda else "cpu")
     image = min_max_norm(image)

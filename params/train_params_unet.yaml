@@ -47,7 +47,7 @@ use_cuda: True
 path_out: "experiments"
 
 # Trainer saves checkpoints only if validation
-# accuracy is greater than  'min_ckp_acc'
+# accuracy is higher than  'min_ckp_acc'
 min_ckp_acc: 0.90
 
 # If the model metric (validation loss) starts increasing,
@@ -58,5 +58,5 @@ min_ckp_acc: 0.90
 early_stop_patience: 10
 
 # Start the training where you left by providing
-# previous original checkpoint (not jit) path
+# previous checkpoint (not jit) path
 init_from_ckp: null
