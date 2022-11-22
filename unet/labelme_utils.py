@@ -30,7 +30,7 @@ def img_arr_to_b64(img_arr):
     return img_b64
 
 
-def json_to_mask(json_list):
+def json_to_mask(json_list, correction=0.4):
     images, masks = [], []
     for json_file in json_list:
         json_obj = open(json_file)
@@ -42,11 +42,26 @@ def json_to_mask(json_list):
             height, width = image.shape
             temp_mask = []
             for cell in cells:
-                poly = [tuple(x) for x in cell["points"]]
-                dummy = Image.new("L", (width, height), 0)
-                ImageDraw.Draw(dummy).polygon(poly, outline=1, fill=1)
-                msk = np.array(dummy)
-                temp_mask.append(msk)
+                poly = np.array(cell["points"])
+                x, y = poly[:, 0], poly[:, 1]
+                x, y = x - correction, y - correction
+
+                # The polygon coordinates from labelme are of 'float' type
+                # So, we need to round and cast them up properly. Otherwise,
+                # we miss some pixels while casting into 'int' type
+                x1 = np.round(x).astype('uint8')
+                y1 = np.round(y).astype('uint8')
+
+                xy1 = [tuple(point) for point in zip(x1, y1)]
+
+                zeros_mask = np.zeros(image.shape[:2], dtype=np.uint8)
+                mask = Image.fromarray(zeros_mask)
+                draw = ImageDraw.Draw(mask)
+
+                assert len(xy1) > 2, "Polygon must have points more than 2"
+                draw.polygon(xy=xy1, outline=1, fill=1)
+                mask = np.array(mask, dtype='bool')
+                temp_mask.append(mask)
             mask = np.sum(temp_mask, axis=0, dtype="float32")
         images.append(image)
         masks.append(mask)
