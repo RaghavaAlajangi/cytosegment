@@ -4,15 +4,13 @@ from os.path import exists, dirname, realpath
 from setuptools import setup, find_packages
 import sys
 
-
 maintainer = "Raghava Alajangi"
 maintainer_email = "raghava.alajangi@mpl.mpg.de"
 description = 'Semantic Segmentation package for the LC project'
 name = "unet"
 year = "2022"
 
-sys.path.insert(0, realpath(dirname(__file__))+"/"+name)
-
+sys.path.insert(0, realpath(dirname(__file__)) + "/" + name)
 
 setup(
     name=name,
@@ -27,21 +25,24 @@ setup(
     description=description,
     long_description=open('README.md').read() if exists('README.md') else '',
     install_requires=[
-        'numpy',
-        'scipy',
+        'albumentations',
+        'click',
+        'dclab',
         'h5py',
+        'numpy',
+        'opencv-python',
         'scikit-image',
         'scikit-learn',
-        'dclab',
-        'albumentations',
+        'scipy',
+        'torch',
+        'torchvision',
     ],
-    python_requires=">=3.7",
-    keywords=["RT-DC", "automation", "post-processing",
-              "algorithms", "analysis"],
+    python_requires=">=3.9",
+    keywords=["RT-DC", "segmentation"],
     classifiers=['Operating System :: OS Independent',
                  'Programming Language :: Python :: 3',
                  'Topic :: Scientific/Engineering',
                  'Intended Audience :: Private',
                  ],
     platforms=['ALL'],
-    )
+)
