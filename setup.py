@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from os.path import exists, dirname, realpath
+from setuptools import setup, find_packages
+import sys
+
+maintainer = "Raghava Alajangi"
+maintainer_email = "raghava.alajangi@mpl.mpg.de"
+description = 'Semantic Segmentation package for the LC project'
+name = "unet"
+year = "2022"
+
+sys.path.insert(0, realpath(dirname(__file__)) + "/" + name)
+
+setup(
+    name=name,
+    maintainer=maintainer,
+    maintainer_email=maintainer_email,
+    url='https://gitlab.gwdg.de/blood_data_analysis/SemanticSegmentor',
+    version='0.0.1',
+    packages=find_packages(),
+    package_dir={name: name},
+    include_package_data=True,
+    license="",
+    description=description,
+    long_description=open('README.md').read() if exists('README.md') else '',
+    install_requires=[
+        'albumentations',
+        'click',
+        'dclab',
+        'h5py',
+        'numpy',
+        'opencv-python',
+        'scikit-image',
+        'scikit-learn',
+        'scipy',
+        'torch',
+        'torchvision',
+    ],
+    python_requires=">=3.9",
+    keywords=["RT-DC", "segmentation"],
+    classifiers=['Operating System :: OS Independent',
+                 'Programming Language :: Python :: 3',
+                 'Topic :: Scientific/Engineering',
+                 'Intended Audience :: Private',
+                 ],
+    platforms=['ALL'],
+)
