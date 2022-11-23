@@ -4,7 +4,6 @@ import json
 from PIL import Image
 import warnings
 
-import cv2
 import numpy as np
 from scipy import interpolate
 from skimage.measure import grid_points_in_poly
@@ -131,8 +130,9 @@ def create_json(img, cnts, cell_labels, img_file_path,
                  "imageHeight": img_height,
                  "imageWidth": img_width}
 
-    # Save the image
-    cv2.imwrite(str(img_file_path), img)
+    # Save image_bg
+    img_pil = Image.fromarray(img)
+    img_pil.save(str(img_file_path))
 
     # Save json file
     with open(json_file, "w") as handle:

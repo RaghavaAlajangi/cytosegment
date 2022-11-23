@@ -1,9 +1,9 @@
 from pathlib import Path
+from PIL import Image
 import random
 
 import albumentations as A
 import click
-import cv2
 import dclab
 import numpy as np
 
@@ -149,7 +149,9 @@ def get_bnet_predictions(patches, mnet, use_cuda=True):
                               path_type=Path),
               help="Path to unet model checkpoint. If it is not given "
                    "default checkpoint is taken from model folder")
-@click.option("--ml_score_feats", "-m",
+@click.option("--min_score", "-s", type=float, default=0.5,
+              help="Specify minimum probability of `ml_score` feature")
+@click.option("--ml_feat_kv", "-m",
               multiple=True,
               required=True,
               help="KEY=VALUE argument for cell_type and num_samples "
@@ -157,7 +159,7 @@ def get_bnet_predictions(patches, mnet, use_cuda=True):
                    "i.e `ml_score_r1f=10`")
 @click.option("--is_cuda", "-c", is_flag=True,
               help="Specify whether cuda device available or not")
-def main(path_in, path_out, kwrags, bb_ckp_path=None,
+def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
          unet_ckp_path=None, is_cuda=False):
     # Get the default model checkpoints
     if bb_ckp_path is None:
@@ -165,12 +167,6 @@ def main(path_in, path_out, kwrags, bb_ckp_path=None,
 
     if unet_ckp_path is None:
         unet_ckp_path = models_path / "E38_validAcc_9838_jit.ckp"
-
-    # Get the key and value arguments
-    ml_score_feats = {}
-    for key, value in [a.split("=") for a in kwrags]:
-        ml_score_feats[key] = int(value)
-    assert len(ml_score_feats) != 0
 
     # Get the dataset name (i.e ../{dataset_name}/M001_data.rtdc)
     ds_name = path_in.parts[-2]
@@ -185,12 +181,19 @@ def main(path_in, path_out, kwrags, bb_ckp_path=None,
     bb = load_model(str(bb_ckp_path), use_cuda=is_cuda)
     unet = load_model(str(unet_ckp_path), use_cuda=is_cuda)
 
-    # ml_score probability range
-    prob_range = [0.5, 1.0]
-
+    # Read the RTDC dataset
     rtdc_ds = dclab.new_dataset(path_in)
 
-    for ml_feat, num_cells in ml_score_feats.items():
+    # If ml_score features are not specified in CLI, labelme files are
+    # created based on available bloody_bunny or mnet predictions in the
+    # dataset (by default 50 samples from each ml_score type)
+    if ml_feat_kv is None:
+        feats = [f for f in rtdc_ds.features if "ml_score_" in f]
+        ml_feat_kv = {k: 50 for k in feats}
+    else:
+        ml_feat_kv = {k: int(v) for k, v in [n.split("=") for n in ml_feat_kv]}
+
+    for ml_feat, num_samples in ml_feat_kv.items():
         if ml_feat in rtdc_ds.features:
             # Create folders to save labelme and image_bg files
             path_labelme = path_out / ml_feat / "labelme"
@@ -200,8 +203,10 @@ def main(path_in, path_out, kwrags, bb_ckp_path=None,
             path_image_bg.mkdir(parents=True, exist_ok=True)
 
             ml_score = np.array(rtdc_ds[ml_feat])
-            feat_idx = np.where(((ml_score > prob_range[0]) &
-                                 (ml_score < prob_range[1])))[0]
+            # Get the indices of the events that have minimum probability
+            # as specified in CLI or default (0.5) i.e [0.5 <= ml_score <= max]
+            feat_idx = np.where((ml_score >= min_score) &
+                                (ml_score <= ml_score.max()))[0]
 
             if len(feat_idx) != 0:
                 counter = 0
@@ -239,7 +244,8 @@ def main(path_in, path_out, kwrags, bb_ckp_path=None,
                                                   f"_idx_{int(ido)}_img_bg.png"
 
                     # Save image_bg
-                    cv2.imwrite(str(img_bg_path), img_bg)
+                    img_bg_pil = Image.fromarray(img_bg)
+                    img_bg_pil.save(str(img_bg_path))
 
                     # Create json file with cell contours and labels
                     create_json(img, polygons, cell_labels, img_path)
@@ -247,11 +253,12 @@ def main(path_in, path_out, kwrags, bb_ckp_path=None,
                     counter += 1
                     print(f"{ml_feat} --> {counter} files", end="\r",
                           flush=True)
-                    if counter == num_cells:
+                    if counter == num_samples:
                         print(f"{ml_feat} --> {counter} files")
                         break
             else:
-                print(f"Zero samples in the probability range {prob_range}")
+                print(f"Zero samples in the probability range "
+                      f"[{min_score}, {ml_score.max()}]")
         else:
             print(f"Dataset does not contains {ml_feat} feature!")
 

@@ -30,7 +30,6 @@ setup(
         'dclab',
         'h5py',
         'numpy',
-        'opencv-python',
         'scikit-image',
         'scikit-learn',
         'scipy',
