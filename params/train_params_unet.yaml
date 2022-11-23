@@ -6,12 +6,13 @@ model:
 
 data:
   type: "HDF5"
-  data_path: data/segm_dataset.hdf5
+  data_path: data/new_segm_dataset.hdf5
   augmentation: False
   valid_size: 0.2
   batch_size: 8
 #  mean: [ 0.6735 ]
 #  std: [ 0.1342 ]
+
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
   # script. The computed values can be used during the model inference.
@@ -34,8 +35,12 @@ metric:
 optimizer:
   type: "Adam"
 
-# Decays the learning rate by ``lr_decay_rate``
-# every ``lr_step_size`` epochs.
+# Decays the learning rate by ``lr_decay_rate`` every ``lr_step_size``
+# epochs. Sometimes model might be ended up within local minima because
+# of the high learning rate. A scheduler will help the model overcome
+# this by minimizing the learning rate progressively. instead of using
+# step based scheduler, the adaptive scheduler could be more effective
+# to get optimal results.
 scheduler:
   type: "stepLR"
   lr_step_size: 10

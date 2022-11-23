@@ -1,12 +1,13 @@
 import base64
 import io
 import json
-from PIL import Image, ImageDraw
+from PIL import Image
 import warnings
 
 import cv2
 import numpy as np
 from scipy import interpolate
+from skimage.measure import grid_points_in_poly
 
 
 def img_b64_to_arr(img_b64):
@@ -39,32 +40,19 @@ def json_to_mask(json_list, correction=0.4):
         img = annotation["imageData"]
         if len(cells) != 0 and img is not None:
             image = img_b64_to_arr(img)
-            height, width = image.shape
             temp_mask = []
             for cell in cells:
                 poly = np.array(cell["points"])
                 x, y = poly[:, 0], poly[:, 1]
-                x, y = x - correction, y - correction
-
-                # The polygon coordinates from labelme are of 'float' type
-                # So, we need to round and cast them up properly. Otherwise,
-                # we miss some pixels while casting into 'int' type
-                x1 = np.round(x).astype('uint8')
-                y1 = np.round(y).astype('uint8')
-
-                xy1 = [tuple(point) for point in zip(x1, y1)]
-
-                zeros_mask = np.zeros(image.shape[:2], dtype=np.uint8)
-                mask = Image.fromarray(zeros_mask)
-                draw = ImageDraw.Draw(mask)
-
-                assert len(xy1) > 2, "Polygon must have points more than 2"
-                draw.polygon(xy=xy1, outline=1, fill=1)
+                x, y = x-correction, y-correction
+                xy = np.array([[p[1], p[0]] for p in zip(x, y)])
+                assert len(xy) > 2, "Polygon must have points more than 2"
+                mask = grid_points_in_poly(image.shape[:2], xy)
                 mask = np.array(mask, dtype='bool')
                 temp_mask.append(mask)
             mask = np.sum(temp_mask, axis=0, dtype="float32")
-        images.append(image)
-        masks.append(mask)
+            images.append(image)
+            masks.append(mask)
     return images, masks
 
 

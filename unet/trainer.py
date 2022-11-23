@@ -77,13 +77,13 @@ class SetTrainer:
         # Load params file (.yaml)
         params = yaml.safe_load(open(params_file_path))
 
-        model_params = params["model"]
+        model_params = params.get("model")
         in_channels = model_params.get("in_channels")
         out_classes = model_params.get("out_classes")
         model = UNet(in_channels, out_classes)
 
-        data_params = params["data"]
-        data_type = data_params["type"]
+        data_params = params.get("data")
+        data_type = data_params.get("type")
         data_path = data_params.get("data_path")
         augmentation = data_params.get("augmentation")
         valid_size = data_params.get("valid_size")
@@ -91,7 +91,7 @@ class SetTrainer:
         mean = data_params.get("mean")
         std = data_params.get("std")
         num_workers = data_params.get("num_workers")
-        if data_type == "JSON":
+        if data_type.lower() == "json":
             unet_dataset = UNetDataset.from_json_files(data_path, augmentation,
                                                        mean, std)
         else:
@@ -100,29 +100,32 @@ class SetTrainer:
 
         data_dict = split_dataset(unet_dataset, valid_size)
 
-        criterion_params = params["criterion"]
+        # Currently, criterion is hardcoded to FocalTverskyLoss
+        criterion_params = params.get("criterion")
         alpha = criterion_params.get("alpha")
         beta = criterion_params.get("beta")
         gamma = criterion_params.get("gamma")
         criterion = FocalTverskyLoss(alpha=alpha, beta=beta, gamma=gamma)
 
-        # metric_params = params["metric"]
+        # Currently, metric is hardcoded to IoUCoeff
+        # metric_params = params.get("metric")
         metric = IoUCoeff()
 
-        optimizer_name = params["optimizer"]["type"]
+        optimizer_params = params.get("optimizer")
+        optimizer_name = optimizer_params.get("type")
 
-        scheduler_params = params["scheduler"]
-        scheduler_name = scheduler_params["type"]
-        lr_step_size = scheduler_params["lr_step_size"]
-        lr_decay_rate = scheduler_params["lr_decay_rate"]
+        scheduler_params = params.get("scheduler")
+        scheduler_name = scheduler_params.get("type")
+        lr_step_size = scheduler_params.get("lr_step_size")
+        lr_decay_rate = scheduler_params.get("lr_decay_rate")
 
-        learn_rate = params["learn_rate"]
-        max_epochs = params["max_epochs"]
-        use_cuda = params["use_cuda"]
-        min_ckp_acc = params["min_ckp_acc"]
-        early_stop_patience = params["early_stop_patience"]
-        path_out = params["path_out"]
-        init_from_ckp = params["init_from_ckp"]
+        learn_rate = params.get("learn_rate")
+        max_epochs = params.get("max_epochs")
+        use_cuda = params.get("use_cuda")
+        min_ckp_acc = params.get("min_ckp_acc")
+        early_stop_patience = params.get("early_stop_patience")
+        path_out = params.get("path_out")
+        init_from_ckp = params.get("init_from_ckp")
 
         return cls(model, data_dict, criterion, metric, optimizer_name,
                    scheduler_name, batch_size, learn_rate, max_epochs,
@@ -139,18 +142,18 @@ class SetTrainer:
         return data_load_dict
 
     def select_optimizer(self):
-        if self.optimizer_name == "Adam":
+        if self.optimizer_name.lower() == "adam":
             return Adam(self.model.parameters(), lr=self.learn_rate)
-        if self.optimizer_name == "SGD":
+        if self.optimizer_name.lower() == "sgd":
             return SGD(self.model.parameters(), lr=self.learn_rate,
                        momentum=0.9)
 
     def select_scheduler(self):
-        if self.scheduler_name == "stepLR":
+        if self.scheduler_name.lower() == "steplr":
             return lr_scheduler.StepLR(optimizer=self.optim,
                                        step_size=self.lr_step_size,
                                        gamma=0.1)
-        if self.scheduler_name == "ReduceLROnPlateau":
+        if self.scheduler_name.lower() == "reducelronplateau":
             return lr_scheduler.ReduceLROnPlateau(optimizer=self.optim,
                                                   mode="max",
                                                   factor=0.2)
@@ -163,9 +166,9 @@ class SetTrainer:
             param.requires_grad = False
 
     def epoch_runner(self, mode):
-        if mode == 'train':
+        if mode.lower() == 'train':
             self.model.train()
-        if mode == 'valid':
+        if mode.lower() == 'valid':
             self.model.eval()
         loss_list = []
         predict_list = []
@@ -177,13 +180,13 @@ class SetTrainer:
             # Zero the parameter gradients
             self.optim.zero_grad()
             # Track history only in train mode
-            with torch.set_grad_enabled(mode == 'train'):
+            with torch.set_grad_enabled(mode.lower() == 'train'):
                 predicts = self.model(images)
                 # [B, 1, H, W] --> [B, H, W] for loss calculation
                 predicts = predicts.squeeze(1)
                 loss = self.criterion(predicts, labels)
                 # Backward + optimize only in train mode
-                if mode == 'train':
+                if mode.lower() == 'train':
                     loss.backward()
                     self.optim.step()
                 loss_item = loss.item()
