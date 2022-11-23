@@ -16,6 +16,8 @@ from torchvision.transforms import Normalize
 from labelMap import id_to_class
 from labelme_utils import create_json
 
+models_path = Path(__file__).parents[1] / "models"
+
 
 class ToTensorMinMax(object):
     def __init__(self):
@@ -130,28 +132,40 @@ def get_bnet_predictions(patches, mnet, use_cuda=True):
                               writable=True,
                               resolve_path=True,
                               path_type=Path),
-              help="Path to save output files (images, JSON files)")
+              help="Path to save output files (images, JSON files). "
+                   "If it is not given, script creates new folder "
+                   "based on `path_in`")
 @click.option("--bb_ckp_path",
               type=click.Path(exists=True,
                               dir_okay=False,
                               resolve_path=True,
                               path_type=Path),
-              help="Path to bloody_bunny model checkpoint")
+              help="Path to bloody_bunny model checkpoint. If it is not "
+                   "given default checkpoint is taken from model folder")
 @click.option("--unet_ckp_path",
               type=click.Path(exists=True,
                               dir_okay=False,
                               resolve_path=True,
                               path_type=Path),
-              help="Path to unet model checkpoint")
-@click.option("--kwrags", "-k",
+              help="Path to unet model checkpoint. If it is not given "
+                   "default checkpoint is taken from model folder")
+@click.option("--ml_score_feats", "-m",
               multiple=True,
               required=True,
               help="KEY=VALUE argument for cell_type and num_samples "
-                   "that needs to be extracted from RTDC dataset")
+                   "that needs to be extracted from RTDC dataset."
+                   "i.e `ml_score_r1f=10`")
 @click.option("--is_cuda", "-c", is_flag=True,
               help="Specify whether cuda device available or not")
-def main(path_in, path_out, bb_ckp_path,
-         unet_ckp_path, kwrags, is_cuda=False):
+def main(path_in, path_out, kwrags, bb_ckp_path=None,
+         unet_ckp_path=None, is_cuda=False):
+    # Get the default model checkpoints
+    if bb_ckp_path is None:
+        bb_ckp_path = models_path / "new_mnet_minmax.pth"
+
+    if unet_ckp_path is None:
+        unet_ckp_path = models_path / "E38_validAcc_9838_jit.ckp"
+
     # Get the key and value arguments
     ml_score_feats = {}
     for key, value in [a.split("=") for a in kwrags]:
@@ -171,7 +185,11 @@ def main(path_in, path_out, bb_ckp_path,
     bb = load_model(str(bb_ckp_path), use_cuda=is_cuda)
     unet = load_model(str(unet_ckp_path), use_cuda=is_cuda)
 
+    # ml_score probability range
+    prob_range = [0.5, 1.0]
+
     rtdc_ds = dclab.new_dataset(path_in)
+
     for ml_feat, num_cells in ml_score_feats.items():
         if ml_feat in rtdc_ds.features:
             # Create folders to save labelme and image_bg files
@@ -182,53 +200,60 @@ def main(path_in, path_out, bb_ckp_path,
             path_image_bg.mkdir(parents=True, exist_ok=True)
 
             ml_score = np.array(rtdc_ds[ml_feat])
-            feat_idx = np.where(((ml_score > 0.1) & (ml_score < 0.9)))[0]
+            feat_idx = np.where(((ml_score > prob_range[0]) &
+                                 (ml_score < prob_range[1])))[0]
 
-            counter = 0
-            for idx in random.sample(range(0, len(feat_idx)),
-                                     len(feat_idx) - 1):
-                img = rtdc_ds["image"][idx]
-                img_bg = rtdc_ds["image_bg"][idx]
-                frm = rtdc_ds["frame"][idx]
-                ido = rtdc_ds["index_online"][idx]
+            if len(feat_idx) != 0:
+                counter = 0
+                for idx in random.sample(range(0, len(feat_idx)),
+                                         len(feat_idx) - 1):
+                    img = rtdc_ds["image"][idx]
+                    img_bg = rtdc_ds["image_bg"][idx]
+                    frm = rtdc_ds["frame"][idx]
+                    ido = rtdc_ds["index_online"][idx]
 
-                # Create img_corr feature
-                img_cor = np.array(img, dtype=int) - img_bg + img_bg.mean()
+                    # Create img_corr feature
+                    img_cor = np.array(img, dtype=int) - img_bg + img_bg.mean()
 
-                # Get the unet prediction of image
-                segm_pred = get_unet_prediction(img, unet)
+                    # Get the unet prediction of image
+                    segm_pred = get_unet_prediction(img, unet)
 
-                # Split unet prediction into individual cell masks
-                msks, polygons = extract_masks_polygons(segm_pred)
+                    # Split unet prediction into individual cell masks
+                    msks, polygons = extract_masks_polygons(segm_pred)
 
-                # Extract cell patches based on image, image_bg, and mask
-                patch_tens = extract_patch_tensors(img_cor, msks)
+                    # Extract cell patches based on image, image_bg, and mask
+                    patch_tens = extract_patch_tensors(img_cor, msks)
 
-                # Predict cell patches with bloody bunny
-                cell_preds = get_bnet_predictions(patch_tens, bb)
+                    # Predict cell patches with bloody bunny
+                    cell_preds = get_bnet_predictions(patch_tens, bb)
 
-                # Label mapping
-                cell_labels = [id_to_class[i] for i in cell_preds]
+                    # Label mapping
+                    cell_labels = [id_to_class[i] for i in cell_preds]
 
-                # Create img_path with dataset name, frameNum, and indexNum
-                img_path = path_labelme / f"{ds_name}_frm_{int(frm)}" \
-                                          f"_idx_{int(ido)}_img.png"
+                    # Create img_path with dataset name, frameNum, and indexNum
+                    img_path = path_labelme / f"{ds_name}_frm_{int(frm)}" \
+                                              f"_idx_{int(ido)}_img.png"
 
-                # Create img_bg_path with dataset name, frameNum, and indexNum
-                img_bg_path = path_image_bg / f"{ds_name}_frm_{int(frm)}" \
-                                              f"_idx_{int(ido)}_img_bg.png"
+                    # Create img_bg_path
+                    img_bg_path = path_image_bg / f"{ds_name}_frm_{int(frm)}" \
+                                                  f"_idx_{int(ido)}_img_bg.png"
 
-                # Save image_bg
-                cv2.imwrite(str(img_bg_path), img_bg)
+                    # Save image_bg
+                    cv2.imwrite(str(img_bg_path), img_bg)
 
-                # Create json file with cell contours and labels
-                create_json(img, polygons, cell_labels, img_path)
+                    # Create json file with cell contours and labels
+                    create_json(img, polygons, cell_labels, img_path)
 
-                counter += 1
-                print(f"{ml_feat} --> {counter} files", end="\r", flush=True)
-                if counter == num_cells:
-                    print(f"{ml_feat} --> {counter} files")
-                    break
+                    counter += 1
+                    print(f"{ml_feat} --> {counter} files", end="\r",
+                          flush=True)
+                    if counter == num_cells:
+                        print(f"{ml_feat} --> {counter} files")
+                        break
+            else:
+                print(f"Zero samples in the probability range {prob_range}")
+        else:
+            print(f"Dataset does not contains {ml_feat} feature!")
 
 
 if __name__ == "__main__":
