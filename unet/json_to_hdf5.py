@@ -35,17 +35,18 @@ def create_hdf5(images, masks, filename="segment_dataset.hdf5"):
 
 @click.command(help="This script helps to create HDF5 file from "
                     "Labelme JSON files")
-@click.argument("path_in",
-                type=click.Path(exists=True,
-                                dir_okay=True,
-                                resolve_path=True,
-                                path_type=Path))
-@click.argument("path_out",
-                required=False,
-                type=click.Path(dir_okay=False,
-                                writable=True,
-                                resolve_path=True,
-                                path_type=Path))
+@click.option("--path_in",
+              type=click.Path(exists=True,
+                              dir_okay=True,
+                              resolve_path=True,
+                              path_type=Path),
+              help="Path to .json files folder")
+@click.option("--path_out",
+              type=click.Path(dir_okay=False,
+                              writable=True,
+                              resolve_path=True,
+                              path_type=Path),
+              help="Optional! Path to save output (.hdf5) file")
 def main(path_in, path_out=None):
     if path_out is None:
         path_out = path_in.with_name("segm_dataset.hdf5")

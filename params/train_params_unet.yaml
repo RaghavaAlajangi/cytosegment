@@ -47,7 +47,7 @@ scheduler:
   lr_decay_rate: 0.1
 
 learn_rate: 0.001
-max_epochs: 100
+max_epochs: 2
 use_cuda: True
 path_out: "experiments"
 

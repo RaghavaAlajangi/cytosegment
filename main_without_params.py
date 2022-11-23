@@ -8,6 +8,11 @@ from unet.trainer import SetTrainer
 from unet.dataset import UNetDataset, split_dataset
 from unet.criterion import FocalTverskyLoss
 from unet.metrics import IoUCoeff
+# from unet.dataset_utils import compute_mean_std
+
+
+# hdf5_path = "data/segm_dataset.hdf5"
+
 
 # model
 IN_CHANNELS = 1
@@ -51,6 +56,10 @@ PATH_OUT = "experiments"
 
 hdf5_path = "data/segm_dataset.hdf5"
 json_path = r"C:\Raghava_local\BENCHMARK_DATA\test"
+
+# mean, std = compute_mean_std(hdf5_path)
+# MEAN = [mean]
+# STD = [std]
 
 dataset_mode = "HDF5"
 

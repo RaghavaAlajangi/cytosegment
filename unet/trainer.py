@@ -208,6 +208,8 @@ class SetTrainer:
         with open(self.nowtime_path / "train_logs.json", "w") as fp:
             json.dump(logs, fp)
 
+
+
         epoch = logs["epochs"]
         train_loss = logs["train_loss"]
         train_acc = logs["train_acc"]

@@ -153,10 +153,11 @@ def get_bnet_predictions(patches, mnet, use_cuda=True):
               help="Specify minimum probability of `ml_score` feature")
 @click.option("--ml_feat_kv", "-m",
               multiple=True,
-              required=True,
-              help="KEY=VALUE argument for cell_type and num_samples "
-                   "that needs to be extracted from RTDC dataset."
-                   "i.e `ml_score_r1f=10`")
+              help="KEY=VALUE argument for cell_type and num_samples pair "
+                   "that needs to be extracted from RTDC dataset. "
+                   "i.e `ml_score_r1f=10` If it is not given, `ml_score` "
+                   "features in dataset are used to generate labelme samples "
+                   "(by default 50 samples from each type)")
 @click.option("--is_cuda", "-c", is_flag=True,
               help="Specify whether cuda device available or not")
 def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
