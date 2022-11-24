@@ -30,6 +30,8 @@ setup(
         'dclab',
         'h5py',
         'numpy',
+        'matplotlib',
+        'pyyaml',
         'scikit-image',
         'scikit-learn',
         'scipy',

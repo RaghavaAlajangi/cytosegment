@@ -166,13 +166,14 @@ dataloaders = get_dataloaders_with_params(params)
 ```bash
 from unet.ml_models import UNet, get_model_with_params
 
-IN_CHANNELS = 1
-OUT_CLASSES = 1
-
 # With params
 unet_model = get_model_with_params(params)
 
 # Without params
+
+IN_CHANNELS = 1
+OUT_CLASSES = 1
+
 unet_model = UNet(n_channels=IN_CHANNELS, n_classes=OUT_CLASSES)
 ```
 
