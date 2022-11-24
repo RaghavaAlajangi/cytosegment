@@ -25,7 +25,7 @@ dataset:
   # 'num_samples' is useful for testing. Irrespective of the number of
   # samples available in the dataset, It takes only a specific number
   # of cells to run the pipeline.
-  num_samples: null
+  num_samples: 50
 
 criterion:
   type: "FocalTverskyLoss"
@@ -52,8 +52,8 @@ scheduler:
   lr_step_size: 10
   lr_decay_rate: 0.1
 
-max_epochs: 10
-use_cuda: True
+max_epochs: 5
+use_cuda: False
 path_out: "experiments"
 
 # Trainer start saving checkpoints only after the validation

@@ -88,8 +88,10 @@ a model either `.hdf5` file or `.json` files.
 
 
 # Model training
-NOTE: I have not implemented dvc yet, so for time being, paste the data file into the cloned repository under `data/`
+NOTE: DVC has not implemented dvc yet for versioning, so for time being, paste the data file into the cloned repository under `data/`
 manually from the HSMFS shared-drive `U:\Members\Raghava\Benchmark_UNet\new_segm_dataset.hdf5` before training
+
+Change the required parameters in `params/unet_params.yaml` before training.
 
 ## With params file:
 

@@ -33,7 +33,6 @@ setup(
         'matplotlib',
         'pyyaml',
         'scikit-image',
-        'scikit-learn',
         'scipy',
         'torch>=1.12.0',
         'torchvision>=0.13.0',
