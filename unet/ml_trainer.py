@@ -187,7 +187,7 @@ class SetTrainer:
                         "optimizer_state_dict": self.optimizer.state_dict(),
                         }, org_path)
 
-    def train(self):
+    def strat_train(self):
         val_acc_list = []
         train_logs = {"epochs": [],
                       "dynamicLR": [],

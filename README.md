@@ -83,8 +83,8 @@ Options:
 python unet/json_to_hdf5.py --path_in "C:/ralajan/rtdc_data_1"
 ```
 
-It is not necessary to create `.hdf5` file from `.json` files to train a model because we can train 
-a model with `.hdf5` file as well as `.json` files.
+`NOTE:`Creating `.hdf5` from `.json` files is optional because we can train 
+a model either `.hdf5` file or `.json` files.
 
 
 # Model training
@@ -102,7 +102,7 @@ sub-folders will be created based on date and time of the experiment, and model 
 (at different validation accuracies), train logs, and plots will be saved there. Checkpoint path 
 consists of epoch number and validation accuracy like example below.
 ```bash
-E28_validAcc_9081_jit.ckp > E{checkpoint number}_validAcc_{validation accuracy}_{type of model}.ckp
+E28_validAcc_9081_jit.ckp  >>>  E{checkpoint number}_validAcc_{validation accuracy}_{type of model}.ckp
 ```
 
 ## Without params file:
@@ -114,16 +114,18 @@ Sometimes, we want to train a model in jupyter notebooks because:
 
 There is an example notebook in the repo `training_notebook.ipynb`. You can use it for training.
 
-### How to create a model object?
-```bash
-from unet.ml_models import UNet
-unet_model = UNet(n_channels=IN_CHANNELS, n_classes=OUT_CLASSES)
-```
+
 ### How to use and create dataset object?
 
 We can create dataset object with `json_files_path` as well as `hdf5_file_path` as shown below.
 ```bash
 from unet.ml_dataset import UNetDataset
+
+AUGMENT = False
+MEAN = [0.6795]
+STD = [0.1417]
+
+json_path = r"C:\Raghava_local\BENCHMARK_DATA\test"
 
 # With json_files_path
 unet_dataset = UNetDataset.from_json_files(json_path, AUGMENT, MEAN, STD)
@@ -136,12 +138,17 @@ contains dataset objects for both `training` and `validation`
 ```bash
 from unet.ml_dataset import split_dataset
 
+VALID_SIZE = 0.2
+
 data_dict = split_dataset(unet_dataset, VALID_SIZE)
 ```
 
 Finally, create dataloaders
 ```bash
 from unet.ml_dataset import create_dataloaders
+
+BATCH_SIZE = 8
+NUM_WORKERS = 0
 
 dataloaders = create_dataloaders(data_dict, BATCH_SIZE, NUM_WORKERS)
 ```
@@ -153,4 +160,108 @@ Instead, if you have all the parameters in `params.yaml` file, we can simply cre
 from unet.ml_dataset import get_dataloaders_with_params
 
 dataloaders = get_dataloaders_with_params(params)
+```
+
+### How to create a model object?
+```bash
+from unet.ml_models import UNet, get_model_with_params
+
+IN_CHANNELS = 1
+OUT_CLASSES = 1
+
+# With params
+unet_model = get_model_with_params(params)
+
+# Without params
+unet_model = UNet(n_channels=IN_CHANNELS, n_classes=OUT_CLASSES)
+```
+
+### How to create a criterion object?
+```bash
+from unet.ml_criterions import FocalTverskyLoss, get_criterion_with_params
+
+# With params
+criterion = get_criterion_with_params(params)
+
+# Without params
+
+ALPHA = 0.3
+BETA = 0.7
+GAMMA = 0.75
+
+criterion = FocalTverskyLoss(alpha=ALPHA, beta=BETA, gamma=GAMMA)
+```
+
+### How to create a metric object?
+```bash
+from unet.ml_metrics import IoUCoeff, get_metric_with_params
+
+# With params
+metric = get_metric_with_params(params)
+
+# Without params
+metric = IoUCoeff()
+```
+### How to create an optimizer object?
+```bash
+from torch.optim import Adam, lr_scheduler
+from unet.ml_optimizers import get_optimizer_with_params
+
+# With params
+optimizer = get_optimizer_with_params(params, model)
+
+# Without params
+
+LEARN_RATE = 0.001
+
+optimizer = Adam(unet_model.parameters(), lr=LEARN_RATE)
+```
+
+### How to create an scheduler object?
+```bash
+from torch.optim import lr_scheduler
+from .ml_schedulers import get_scheduler_with_params
+
+# With params
+scheduler = get_scheduler_with_params(params, optimizer)
+
+# Without params
+
+LR_STEP_SIZE = 10
+LR_DECAY_RATE = 0.1
+
+scheduler = lr_scheduler.StepLR(optimizer=optimizer,
+                                step_size=LR_STEP_SIZE,
+                                gamma=LR_DECAY_RATE)
+```
+### How to create trainer object?
+```bash
+from unet.ml_trainer import SetTrainer
+
+# With params
+trainer = SetTrainer.with_params(params)
+
+# Without params
+
+MAX_EPOCHS = 5
+USE_CUDA = True
+MIN_CKP_ACC = 0.8
+EARLY_STOP_PATIENCE = 10
+PATH_OUT = "experiments"
+
+trainer = SetTrainer(model=unet_model,
+                     dataloaders=dataloaders,
+                     criterion=criterion,
+                     metric=metric,
+                     optimizer=optimizer,
+                     scheduler=scheduler,
+                     max_epochs=MAX_EPOCHS,
+                     use_cuda=USE_CUDA,
+                     min_ckp_acc=MIN_CKP_ACC,
+                     early_stop_patience=EARLY_STOP_PATIENCE,
+                     path_out=PATH_OUT,
+                     init_from_ckp=None)
+ 
+ # Training
+ trainer.strat_train()
 ```
