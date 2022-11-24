@@ -17,6 +17,7 @@ def get_dataloaders_with_params(params):
     assert {"data_path", "augmentation"}.issubset(dataset_params)
     assert {"valid_size", "batch_size"}.issubset(dataset_params)
     assert {"mean", "std", "num_workers"}.issubset(dataset_params)
+    assert {"num_samples"}.issubset(dataset_params)
 
     data_path = dataset_params.get("data_path")
     augmentation = dataset_params.get("augmentation")
@@ -25,15 +26,14 @@ def get_dataloaders_with_params(params):
     mean = dataset_params.get("mean")
     std = dataset_params.get("std")
     num_workers = dataset_params.get("num_workers")
+    num_samples = dataset_params.get("num_samples")
 
     if data_type.lower() == "json":
-        unet_dataset = UNetDataset.from_json_files(data_path,
-                                                   augmentation,
-                                                   mean, std)
+        unet_dataset = UNetDataset.from_json_files(data_path, augmentation,
+                                                   mean, std, num_samples)
     else:
-        unet_dataset = UNetDataset.from_hdf5_data(data_path,
-                                                  augmentation,
-                                                  mean, std)
+        unet_dataset = UNetDataset.from_hdf5_data(data_path, augmentation,
+                                                  mean, std, num_samples)
 
     data_dict = split_dataset(unet_dataset, valid_size)
     dataloader_dict = create_dataloaders(data_dict, batch_size, num_workers)
