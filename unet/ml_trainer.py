@@ -33,7 +33,7 @@ class SetTrainer:
                  ):
         self.model = model
         self.dataloaders = dataloaders
-        self.loss_function = criterion
+        self.criterion = criterion
         self.metric = metric
         self.optimizer = optimizer
         self.scheduler = scheduler

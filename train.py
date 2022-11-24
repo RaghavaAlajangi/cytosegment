@@ -20,7 +20,7 @@ def main(params_path):
 
     tik = time.time()
     print("Started training.....")
-    trainer.train()
+    trainer.strat_train()
     tok = time.time() - tik
     train_time = str(timedelta(seconds=tok)).split('.')[0]
     print(f"Total training time: {train_time}")
