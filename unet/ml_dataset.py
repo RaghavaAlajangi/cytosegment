@@ -36,13 +36,7 @@ def get_dataloaders_with_params(params):
                                                   mean, std)
 
     data_dict = split_dataset(unet_dataset, valid_size)
-
-    dataloader_dict = dict()
-    for m in data_dict.keys():
-        dataloader_dict[m] = DataLoader(data_dict[m],
-                                        batch_size=batch_size,
-                                        num_workers=num_workers,
-                                        shuffle=True)
+    dataloader_dict = create_dataloaders(data_dict, batch_size, num_workers)
     return dataloader_dict
 
 
@@ -118,7 +112,7 @@ def split_dataset(dataset_object, valid_size=0.2):
     return data
 
 
-def unet_data_loaders(data_dict, batch_size, num_workers=None):
+def create_dataloaders(data_dict, batch_size, num_workers=0):
     data_load_dict = dict()
     for m in data_dict.keys():
         data_load_dict[m] = DataLoader(data_dict[m],

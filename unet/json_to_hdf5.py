@@ -34,13 +34,14 @@ def create_hdf5(images, masks, filename="segment_dataset.hdf5"):
 
 
 @click.command(help="This script helps to create HDF5 file from "
-                    "Labelme JSON files")
+                    "JSON files.")
 @click.option("--path_in",
               type=click.Path(exists=True,
                               dir_okay=True,
                               resolve_path=True,
                               path_type=Path),
-              help="Path to .json files folder")
+              help="Path to .json files folder (script collects .json files"
+                   "recursively)")
 @click.option("--path_out",
               type=click.Path(dir_okay=False,
                               writable=True,
@@ -53,11 +54,14 @@ def main(path_in, path_out=None):
 
     # Get the JSON files in the path_in folder
     json_files = [p for p in Path(path_in).rglob("*.json") if p.is_file()]
-    # Create images and masks out of json files
-    images, masks = json_to_mask(json_files)
-    # Create final hdf5 file
-    create_hdf5(images, masks, filename=path_out)
-    print("HDF5 file is created!")
+    if len(json_files) != 0:
+        # Create images and masks out of json files
+        images, masks = json_to_mask(json_files)
+        # Create final hdf5 file
+        create_hdf5(images, masks, filename=path_out)
+        print("HDF5 file is created!")
+    else:
+        print("Given path has no .json files!")
 
 
 if __name__ == "__main__":

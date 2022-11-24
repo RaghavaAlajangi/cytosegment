@@ -67,7 +67,7 @@ Manual editing
 ### Step-3:
 
 Convert `.json` files into `.hdf5` file that contains images and binary mask. 
-Use `rtdc_to_json.py` script to do so.
+Use `json_to_hdf5.py` script to do so.
 
 ```bash
 python unet/json_to_hdf5.py --help
@@ -87,9 +87,9 @@ It is not necessary to create `.hdf5` file from `.json` files to train a model b
 a model with `.hdf5` file as well as `.json` files.
 
 
-## Model training
+# Model training
 
-## With params:
+## With params file:
 
 Change the required parameters in `unet_params.yaml` file and then run the below command for training
 
@@ -105,8 +105,52 @@ consists of epoch number and validation accuracy like example below.
 E28_validAcc_9081_jit.ckp > E{checkpoint number}_validAcc_{validation accuracy}_{type of model}.ckp
 ```
 
-## Without params:
+## Without params file:
+Sometimes, we want to train a model in jupyter notebooks because:
+- We can apply trial and error method to select hyper-parameters quickly
+- To visually inspect data samples, how do they look? how do transforms look like? to see some stats (shapes, normalization, image ranges)
+- To see the model convergence progress
+- To debug
 
-### Creating Dataset object
+There is an example notebook in the repo `training_notebook.ipynb`. You can use it for training.
 
+### How to create a model object?
+```bash
+from unet.ml_models import UNet
+unet_model = UNet(n_channels=IN_CHANNELS, n_classes=OUT_CLASSES)
+```
+### How to use and create dataset object?
 
+We can create dataset object with `json_files_path` as well as `hdf5_file_path` as shown below.
+```bash
+from unet.ml_dataset import UNetDataset
+
+# With json_files_path
+unet_dataset = UNetDataset.from_json_files(json_path, AUGMENT, MEAN, STD)
+
+# With hdf5_file_path
+unet_dataset = UNetDataset.from_hdf5_data(hdf5_path, AUGMENT, MEAN, STD)
+```
+Data splitting for training and validation. As you can see below, `data_dict` is a pathon dictionary 
+contains dataset objects for both `training` and `validation`
+```bash
+from unet.ml_dataset import split_dataset
+
+data_dict = split_dataset(unet_dataset, VALID_SIZE)
+```
+
+Finally, create dataloaders
+```bash
+from unet.ml_dataset import create_dataloaders
+
+dataloaders = create_dataloaders(data_dict, BATCH_SIZE, NUM_WORKERS)
+```
+
+Instead, if you have all the parameters in `params.yaml` file, we can simply create dataloaders with 
+`get_dataloaders_with_params()` function like below.
+
+```bash
+from unet.ml_dataset import get_dataloaders_with_params
+
+dataloaders = get_dataloaders_with_params(params)
+```
