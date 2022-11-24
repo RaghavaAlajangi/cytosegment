@@ -27,6 +27,41 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def get_criterion_with_params(params):
+    assert {"criterion"}.issubset(params)
+    criterion_params = params.get("criterion")
+    assert {"type"}.issubset(criterion_params)
+    criterion_type = criterion_params.get("type")
+
+    if criterion_type.lower() == "diceloss":
+        return DiceLoss()
+
+    if criterion_type.lower() == "dicebceloss":
+        return DiceBCELoss()
+
+    if criterion_type.lower() == "iouloss":
+        return IoULoss()
+
+    if criterion_type.lower() == "focalloss":
+        assert {"alpha", "gamma"}.issubset(criterion_params)
+        alpha = criterion_params.get("alpha")
+        gamma = criterion_params.get("gamma")
+        return FocalLoss(alpha, gamma)
+
+    if criterion_type.lower() == "tverskytoss":
+        assert {"alpha", "beta"}.issubset(criterion_params)
+        alpha = criterion_params.get("alpha")
+        beta = criterion_params.get("beta")
+        return TverskyLoss(alpha, beta)
+
+    if criterion_type.lower() == "focaltverskyloss":
+        assert {"alpha", "beta", "gamma"}.issubset(criterion_params)
+        alpha = criterion_params.get("alpha")
+        beta = criterion_params.get("beta")
+        gamma = criterion_params.get("gamma")
+        return FocalTverskyLoss(alpha, beta, gamma)
+
+
 class DiceLoss(nn.Module):
     """
     Dice Loss:
@@ -38,18 +73,18 @@ class DiceLoss(nn.Module):
         super(DiceLoss, self).__init__()
         self.eps = 1
 
-    def forward(self, inputs, targets):
+    def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
         # activation layer
-        inputs = torch.sigmoid(inputs)
+        predicts = torch.sigmoid(predicts)
 
         # flatten label and prediction tensors
-        inputs = inputs.view(-1)
+        predicts = predicts.view(-1)
         targets = targets.view(-1)
 
-        intersection = (inputs * targets).sum()
+        intersection = (predicts * targets).sum()
         dice = (2. * intersection + self.eps) / (
-                inputs.sum() + targets.sum() + self.eps)
+                predicts.sum() + targets.sum() + self.eps)
 
         return 1 - dice
 
@@ -68,19 +103,19 @@ class DiceBCELoss(nn.Module):
         super(DiceBCELoss, self).__init__()
         self.eps = 1
 
-    def forward(self, inputs, targets):
+    def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
         # activation layer
-        inputs = torch.sigmoid(inputs)
+        predicts = torch.sigmoid(predicts)
 
         # flatten label and prediction tensors
-        inputs = inputs.view(-1)
+        predicts = predicts.view(-1)
         targets = targets.view(-1)
 
-        intersection = (inputs * targets).sum()
+        intersection = (predicts * targets).sum()
         dice_loss = 1 - (2. * intersection + self.eps) / (
-                inputs.sum() + targets.sum() + self.eps)
-        BCE = F.binary_cross_entropy(inputs, targets, reduction="mean")
+                predicts.sum() + targets.sum() + self.eps)
+        BCE = F.binary_cross_entropy(predicts, targets, reduction="mean")
         Dice_BCE = BCE + dice_loss
 
         return Dice_BCE
@@ -100,19 +135,19 @@ class IoULoss(nn.Module):
         super(IoULoss, self).__init__()
         self.eps = 1
 
-    def forward(self, inputs, targets):
+    def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
         # activation layer
-        inputs = torch.sigmoid(inputs)
+        predicts = torch.sigmoid(predicts)
 
         # flatten label and prediction tensors
-        inputs = inputs.view(-1)
+        predicts = predicts.view(-1)
         targets = targets.view(-1)
 
         # intersection is equivalent to True Positive count
         # union is the mutually inclusive area of all labels & predictions
-        intersection = (inputs * targets).sum()
-        total = (inputs + targets).sum()
+        intersection = (predicts * targets).sum()
+        total = (predicts + targets).sum()
         union = total - intersection
 
         IoU = (intersection + self.eps) / (union + self.eps)
@@ -137,17 +172,17 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
         self.eps = 1
 
-    def forward(self, inputs, targets):
+    def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
         # activation layer
-        inputs = torch.sigmoid(inputs)
+        predicts = torch.sigmoid(predicts)
 
         # flatten label and prediction tensors
-        inputs = inputs.view(-1)
+        predicts = predicts.view(-1)
         targets = targets.view(-1)
 
         # first compute binary cross-entropy
-        BCE = F.binary_cross_entropy(inputs, targets, reduction="mean")
+        BCE = F.binary_cross_entropy(predicts, targets, reduction="mean")
         BCE_EXP = torch.exp(-BCE)
         focal_loss = self.alpha * (1 - BCE_EXP) ** self.gamma * BCE
 
@@ -184,19 +219,19 @@ class TverskyLoss(nn.Module):
         self.beta = beta
         self.eps = 1
 
-    def forward(self, inputs, targets):
+    def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
         # activation layer
-        inputs = torch.sigmoid(inputs)
+        predicts = torch.sigmoid(predicts)
 
         # flatten label and prediction tensors
-        inputs = inputs.view(-1)
+        predicts = predicts.view(-1)
         targets = targets.view(-1)
 
         # True Positives, False Positives & False Negatives
-        TP = (inputs * targets).sum()
-        FP = ((1 - targets) * inputs).sum()
-        FN = (targets * (1 - inputs)).sum()
+        TP = (predicts * targets).sum()
+        FP = ((1 - targets) * predicts).sum()
+        FN = (targets * (1 - predicts)).sum()
 
         tversky = (TP + self.eps) / (TP + self.alpha * FP +
                                      self.beta * FN + self.eps)
@@ -217,19 +252,19 @@ class FocalTverskyLoss(nn.Module):
         self.gamma = gamma
         self.eps = 1
 
-    def forward(self, predicts, labels):
+    def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
         # activation layer
         predicts = torch.sigmoid(predicts)
 
         # flatten label and prediction tensors
         predicts = predicts.view(-1)
-        labels = labels.view(-1)
+        targets = targets.view(-1)
 
         # True Positives, False Positives & False Negatives
-        true_positives = (predicts * labels).sum()
-        flase_positives = ((1 - labels) * predicts).sum()
-        false_negatives = (labels * (1 - predicts)).sum()
+        true_positives = (predicts * targets).sum()
+        flase_positives = ((1 - targets) * predicts).sum()
+        false_negatives = (targets * (1 - predicts)).sum()
 
         tversky = (true_positives + self.eps) / (self.eps + true_positives +
                                                  self.alpha * flase_positives +

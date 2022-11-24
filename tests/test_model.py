@@ -1,6 +1,6 @@
 import torch
 
-from unet.models import UNet
+from unet.ml_models import UNet
 
 
 def test_model():

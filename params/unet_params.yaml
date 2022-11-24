@@ -4,7 +4,7 @@ model:
   out_classes: 1
   bilinear: False
 
-data:
+dataset:
   type: "HDF5"
   data_path: data/new_segm_dataset.hdf5
   augmentation: False
@@ -18,7 +18,7 @@ data:
   # script. The computed values can be used during the model inference.
   # If there is a change in the dataset (either inclusion or exclusion of
   # image and mask pairs into the dataset), we need to recalculate the mean
-  # and std values.
+  # and std values of the dataset.
   mean: [ 0.6795 ]
   std: [ 0.1417 ]
   num_workers: 0
@@ -34,24 +34,25 @@ metric:
 
 optimizer:
   type: "Adam"
+  learn_rate: 0.001
 
 # Decays the learning rate by ``lr_decay_rate`` every ``lr_step_size``
 # epochs. Sometimes model might be ended up within local minima because
 # of the high learning rate. A scheduler will help the model overcome
-# this by minimizing the learning rate progressively. instead of using
-# step based scheduler, the adaptive scheduler could be more effective
-# to get optimal results.
+# this by minimizing the learning rate progressively.
+
+# NOTE: instead of using step based scheduler, the adaptive scheduler
+# could be more effective to get optimal results.
 scheduler:
   type: "stepLR"
   lr_step_size: 10
   lr_decay_rate: 0.1
 
-learn_rate: 0.001
-max_epochs: 2
+max_epochs: 10
 use_cuda: True
 path_out: "experiments"
 
-# Trainer saves checkpoints only if validation
+# Trainer start saving checkpoints only after the validation
 # accuracy is higher than  'min_ckp_acc'
 min_ckp_acc: 0.90
 

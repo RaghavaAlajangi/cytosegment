@@ -1,6 +1,6 @@
 import numpy as np
 
-from unet.criterion import FocalTverskyLoss
+from unet.ml_criterions import FocalTverskyLoss
 
 from .helper_methods import get_test_tensors
 

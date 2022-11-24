@@ -2,6 +2,19 @@ import torch
 import torch.nn as nn
 
 
+def get_metric_with_params(params):
+    assert {"metric"}.issubset(params)
+    metric_params = params.get("metric")
+    assert {"type"}.issubset(metric_params)
+    metric_type = metric_params.get("type")
+
+    if metric_type.lower() == "ioucoeff":
+        return IoUCoeff()
+
+    if metric_type.lower() == "dicecoeff":
+        return DiceCoeff()
+
+
 class DiceCoeff(nn.Module):
     def __init__(self, smooth=1):
         super(DiceCoeff, self).__init__()

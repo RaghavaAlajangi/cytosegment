@@ -8,6 +8,44 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from .labelme_utils import json_to_mask
 
 
+def get_dataloaders_with_params(params):
+    assert {"dataset"}.issubset(params)
+    dataset_params = params.get("dataset")
+    assert {"type"}.issubset(dataset_params)
+    data_type = dataset_params.get("type")
+
+    assert {"data_path", "augmentation"}.issubset(dataset_params)
+    assert {"valid_size", "batch_size"}.issubset(dataset_params)
+    assert {"mean", "std", "num_workers"}.issubset(dataset_params)
+
+    data_path = dataset_params.get("data_path")
+    augmentation = dataset_params.get("augmentation")
+    valid_size = dataset_params.get("valid_size")
+    batch_size = dataset_params.get("batch_size")
+    mean = dataset_params.get("mean")
+    std = dataset_params.get("std")
+    num_workers = dataset_params.get("num_workers")
+
+    if data_type.lower() == "json":
+        unet_dataset = UNetDataset.from_json_files(data_path,
+                                                   augmentation,
+                                                   mean, std)
+    else:
+        unet_dataset = UNetDataset.from_hdf5_data(data_path,
+                                                  augmentation,
+                                                  mean, std)
+
+    data_dict = split_dataset(unet_dataset, valid_size)
+
+    dataloader_dict = dict()
+    for m in data_dict.keys():
+        dataloader_dict[m] = DataLoader(data_dict[m],
+                                        batch_size=batch_size,
+                                        num_workers=num_workers,
+                                        shuffle=True)
+    return dataloader_dict
+
+
 class UNetDataset(Dataset):
     def __init__(self, images, masks,
                  augment=False, mean=None, std=None):

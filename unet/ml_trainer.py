@@ -5,52 +5,42 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 import torch
-from torch.optim import SGD, Adam, lr_scheduler
-from torch.utils.data import DataLoader
 import yaml
 
-from .criterion import FocalTverskyLoss
-from .dataset import UNetDataset, split_dataset
 from .early_stopping import EarlyStopping
-from .metrics import IoUCoeff
-from .models import UNet
+from .ml_criterions import get_criterion_with_params
+from .ml_dataset import get_dataloaders_with_params
+from .ml_metrics import get_metric_with_params
+from .ml_models import get_model_with_params
+from .ml_optimizers import get_optimizer_with_params
+from .ml_schedulers import get_scheduler_with_params
 
 
 class SetTrainer:
     def __init__(self,
                  model,
-                 data_dict,
+                 dataloaders,
                  criterion,
-                 eval_metric,
-                 optimizer_name,
-                 scheduler_name,
-                 batch_size=8,
-                 learn_rate=0.001,
+                 metric,
+                 optimizer,
+                 scheduler,
                  max_epochs=100,
                  use_cuda=False,
-                 lr_step_size=15,
-                 lr_decay_rate=0.1,
                  min_ckp_acc=0.85,
                  early_stop_patience=10,
                  path_out="experiments",
-                 num_workers=None,
                  init_from_ckp=None,
                  ):
         self.model = model
-        self.data_dict = data_dict
+        self.dataloaders = dataloaders
         self.loss_function = criterion
-        self.eval_metric = eval_metric
-        self.optimizer_name = optimizer_name
-        self.scheduler_name = scheduler_name
-        self.batch_size = batch_size
-        self.learn_rate = learn_rate
+        self.metric = metric
+        self.optimizer = optimizer
+        self.scheduler = scheduler
         self.max_epochs = max_epochs
         self.cuda = use_cuda
-        self.lr_step_size = lr_step_size
-        self.lr_decay_rate = lr_decay_rate
         self.path_out = Path(path_out)
         self.min_ckp_acc = min_ckp_acc
-        self.num_workers = num_workers
 
         self.early_stop = EarlyStopping(early_stop_patience)
         self.device = torch.device("cuda" if self.cuda else "cpu")
@@ -59,10 +49,6 @@ class SetTrainer:
             self.model = model.cuda()
             self.criterion = criterion.cuda()
             # self.model = DataParallel(model)
-
-        self.optim = self.select_optimizer()
-        self.scheduler = self.select_scheduler()
-        self.data_loaders = self.data_loaders(self.data_dict)
 
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
@@ -77,49 +63,13 @@ class SetTrainer:
         # Load params file (.yaml)
         params = yaml.safe_load(open(params_file_path))
 
-        model_params = params.get("model")
-        in_channels = model_params.get("in_channels")
-        out_classes = model_params.get("out_classes")
-        model = UNet(in_channels, out_classes)
+        model = get_model_with_params(params)
+        dataloaders = get_dataloaders_with_params(params)
+        criterion = get_criterion_with_params(params)
+        metric = get_metric_with_params(params)
+        optimizer = get_optimizer_with_params(params, model)
+        scheduler = get_scheduler_with_params(params, optimizer)
 
-        data_params = params.get("data")
-        data_type = data_params.get("type")
-        data_path = data_params.get("data_path")
-        augmentation = data_params.get("augmentation")
-        valid_size = data_params.get("valid_size")
-        batch_size = data_params.get("batch_size")
-        mean = data_params.get("mean")
-        std = data_params.get("std")
-        num_workers = data_params.get("num_workers")
-        if data_type.lower() == "json":
-            unet_dataset = UNetDataset.from_json_files(data_path, augmentation,
-                                                       mean, std)
-        else:
-            unet_dataset = UNetDataset.from_hdf5_data(data_path, augmentation,
-                                                      mean, std)
-
-        data_dict = split_dataset(unet_dataset, valid_size)
-
-        # Currently, criterion is hardcoded to FocalTverskyLoss
-        criterion_params = params.get("criterion")
-        alpha = criterion_params.get("alpha")
-        beta = criterion_params.get("beta")
-        gamma = criterion_params.get("gamma")
-        criterion = FocalTverskyLoss(alpha=alpha, beta=beta, gamma=gamma)
-
-        # Currently, metric is hardcoded to IoUCoeff
-        # metric_params = params.get("metric")
-        metric = IoUCoeff()
-
-        optimizer_params = params.get("optimizer")
-        optimizer_name = optimizer_params.get("type")
-
-        scheduler_params = params.get("scheduler")
-        scheduler_name = scheduler_params.get("type")
-        lr_step_size = scheduler_params.get("lr_step_size")
-        lr_decay_rate = scheduler_params.get("lr_decay_rate")
-
-        learn_rate = params.get("learn_rate")
         max_epochs = params.get("max_epochs")
         use_cuda = params.get("use_cuda")
         min_ckp_acc = params.get("min_ckp_acc")
@@ -127,41 +77,14 @@ class SetTrainer:
         path_out = params.get("path_out")
         init_from_ckp = params.get("init_from_ckp")
 
-        return cls(model, data_dict, criterion, metric, optimizer_name,
-                   scheduler_name, batch_size, learn_rate, max_epochs,
-                   use_cuda, lr_step_size, lr_decay_rate, min_ckp_acc,
-                   early_stop_patience, path_out, num_workers, init_from_ckp)
-
-    def data_loaders(self, data_dict):
-        data_load_dict = dict()
-        for m in data_dict.keys():
-            data_load_dict[m] = DataLoader(data_dict[m],
-                                           batch_size=self.batch_size,
-                                           num_workers=self.num_workers,
-                                           shuffle=True)
-        return data_load_dict
-
-    def select_optimizer(self):
-        if self.optimizer_name.lower() == "adam":
-            return Adam(self.model.parameters(), lr=self.learn_rate)
-        if self.optimizer_name.lower() == "sgd":
-            return SGD(self.model.parameters(), lr=self.learn_rate,
-                       momentum=0.9)
-
-    def select_scheduler(self):
-        if self.scheduler_name.lower() == "steplr":
-            return lr_scheduler.StepLR(optimizer=self.optim,
-                                       step_size=self.lr_step_size,
-                                       gamma=0.1)
-        if self.scheduler_name.lower() == "reducelronplateau":
-            return lr_scheduler.ReduceLROnPlateau(optimizer=self.optim,
-                                                  mode="max",
-                                                  factor=0.2)
+        return cls(model, dataloaders, criterion, metric, optimizer,
+                   scheduler, max_epochs, use_cuda, min_ckp_acc,
+                   early_stop_patience, path_out, init_from_ckp)
 
     def restore_checkpoint(self, ckp_path):
         ckp = torch.load(ckp_path, map_location=self.device)
         self.model.load_state_dict(ckp["model_state_dict"])
-        self.optim.load_state_dict(ckp["optimizer_state_dict"])
+        self.optimizer.load_state_dict(ckp["optimizer_state_dict"])
         for param in self.model.features.parameters():
             param.requires_grad = False
 
@@ -174,11 +97,11 @@ class SetTrainer:
         predict_list = []
         target_list = []
         # Get batch of images and labels iteratively
-        for images, labels in self.data_loaders[mode]:
+        for images, labels in self.dataloaders[mode]:
             images = images.to(self.device, dtype=torch.float32)
             labels = labels.to(self.device, dtype=torch.float32)
             # Zero the parameter gradients
-            self.optim.zero_grad()
+            self.optimizer.zero_grad()
             # Track history only in train mode
             with torch.set_grad_enabled(mode.lower() == 'train'):
                 predicts = self.model(images)
@@ -188,7 +111,7 @@ class SetTrainer:
                 # Backward + optimize only in train mode
                 if mode.lower() == 'train':
                     loss.backward()
-                    self.optim.step()
+                    self.optimizer.step()
                 loss_item = loss.item()
                 del loss  # this may be the fix for my OOM error
                 loss_list.append(loss_item)
@@ -199,7 +122,7 @@ class SetTrainer:
         predict_torch = torch.concat(predict_list, dim=0)
         target_torch = torch.concat(target_list, dim=0)
 
-        scores = self.eval_metric(predict_torch, target_torch)
+        scores = self.metric(predict_torch, target_torch)
         loss_avg = float(np.stack(loss_list).mean())
         acc_avg = float(scores.mean())
         return loss_avg, acc_avg
@@ -207,8 +130,6 @@ class SetTrainer:
     def plot_save_logs(self, logs):
         with open(self.nowtime_path / "train_logs.json", "w") as fp:
             json.dump(logs, fp)
-
-
 
         epoch = logs["epochs"]
         train_loss = logs["train_loss"]
@@ -263,7 +184,7 @@ class SetTrainer:
             torch_fold.mkdir(parents=True, exist_ok=True)
             org_path = str(torch_fold) + f"/{new_ckp_name}_org.ckp"
             torch.save({"model_state_dict": self.model.state_dict(),
-                        "optimizer_state_dict": self.optim.state_dict(),
+                        "optimizer_state_dict": self.optimizer.state_dict(),
                         }, org_path)
 
     def train(self):
@@ -282,7 +203,7 @@ class SetTrainer:
             val_loss, val_acc = self.epoch_runner(mode="valid")
             val_acc_list.append(val_acc)
             dynamic_lr = [group["lr"] for group in
-                          self.optim.param_groups][0]
+                          self.optimizer.param_groups][0]
             train_logs["epochs"].append(epoch)
             train_logs["dynamicLR"].append(dynamic_lr)
             train_logs["train_loss"].append(train_loss)

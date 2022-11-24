@@ -3,6 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def get_model_with_params(params):
+    assert {"model"}.issubset(params)
+    model_params = params.get("model")
+    assert {"type"}.issubset(model_params)
+    model_type = model_params.get("type")
+    if model_type.lower() == "unet":
+        assert {"in_channels", "out_classes"}.issubset(model_params)
+        return UNet(n_channels=model_params.get("in_channels"),
+                    n_classes=model_params.get("out_classes"))
+
+
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
 
@@ -83,6 +94,7 @@ class UNet(nn.Module):
     Find the code here:
     https://github.com/xiaopeng-liao/Pytorch-UNet
     """
+
     def __init__(self, n_channels, n_classes, bilinear=False):
         super(UNet, self).__init__()
         self.n_channels = n_channels

@@ -2,28 +2,6 @@
 
 In this repository, the UNet model (semantic segmentation) data preparation and training code are stored.
 
-## Aims of this project
-
-- [ ] A command line interface:
-
-  - that accepts an `.rtdc` file and creates `.json`
-  - files that we edit manually in `labelme` software to generate clean dataset 
-    for semantic segmentation training using `UNet`. 
-  - that accepts a folder containing `.json` files and generates `.hdf5` file
-    containing images and masks, which can be used for training.
-  
-
-- [ ]  The whole training scripts to train a model:
-
-    - Model
-    - Metric
-    - Criterion
-    - Dataset
-    - Trainer
-
-- [ ] Bash script to train a model on HPC
-- [ ] Bash script to perdict a dataset using trained `UNet` (dcevent)
-
 ## Installation
 
 1. Install git lfs to clone the model checkpoints:  
@@ -105,26 +83,30 @@ Options:
 python unet/json_to_hdf5.py --path_in "C:/ralajan/rtdc_data_1"
 ```
 
-It is not necessary to create `.hdf5` file out of `.json` files to train a model. We can 
-train model in 
-
-## Creating Dataset object
-
+It is not necessary to create `.hdf5` file from `.json` files to train a model because we can train 
+a model with `.hdf5` file as well as `.json` files.
 
 
 ## Model training
 
-### With params
+## With params:
 
-Change the required parameters in `train_params_unet.yaml` file and then run the below command
+Change the required parameters in `unet_params.yaml` file and then run the below command for training
 
 ```bash
-python main_with_params.py --params_path "params/train_params_unet.yaml"
+python train.py --params_path "params/unet_params.yaml"
 ```
 
-Once the training is finished, a folder (`experiments`) will be created and model checkpoints 
-(at different validation accuracies), train logs, and plots will be saved there.
+During training, a folder (`experiments`) will be created to save the experiments. Moreover, 
+sub-folders will be created based on date and time of the experiment, and model checkpoints 
+(at different validation accuracies), train logs, and plots will be saved there. Checkpoint path 
+consists of epoch number and validation accuracy like example below.
+```bash
+E28_validAcc_9081_jit.ckp > E{checkpoint number}_validAcc_{validation accuracy}_{type of model}.ckp
+```
 
-### Without params
+## Without params:
+
+### Creating Dataset object
 
 

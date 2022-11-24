@@ -11,5 +11,6 @@ __pycache__
 
 .ipynb
 .idea/
+.ipynb_checkpoints/
 
 test_init.py

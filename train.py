@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from unet.trainer import SetTrainer
+from unet.ml_trainer import SetTrainer
 
 
 @click.command(help="Script to run the training")
