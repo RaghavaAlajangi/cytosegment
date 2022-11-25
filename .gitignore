@@ -2,8 +2,8 @@
 venv/
 
 # Training data
-data/
-experiments/
+TEST_DATA/
+old_experiments/
 
 
 # Byte-compiled / optimized / DLL files

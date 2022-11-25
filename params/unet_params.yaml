@@ -24,7 +24,7 @@ dataset:
   num_workers: 0
   # 'num_samples' is useful for testing. Irrespective of the number of
   # samples available in the dataset, It takes only a specific number
-  # of cells to run the pipeline.
+  # of samples from the dataset to run the test pipeline.
   num_samples: 50
 
 criterion:

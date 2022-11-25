@@ -88,14 +88,88 @@ a model either `.hdf5` file or `.json` files.
 
 
 # Model training
-NOTE: DVC has not implemented dvc yet for versioning, so for time being, paste the data file into the cloned repository under `data/`
-manually from the HSMFS shared-drive `U:\Members\Raghava\Benchmark_UNet\new_segm_dataset.hdf5` before training
-
-Change the required parameters in `params/unet_params.yaml` before training.
+NOTE: DVC has not implemented yet for data versioning, so for time being, dataset has been placed in `lfs`.
+You can also get the data from from the HSMFS shared-drive `U:\Members\Raghava\Benchmark_UNet\new_segm_dataset.hdf5` 
+manually.
 
 ## With params file:
 
 Change the required parameters in `unet_params.yaml` file and then run the below command for training
+
+```bash
+model:
+  type: "UNet"
+  in_channels: 1
+  out_classes: 1
+  bilinear: False
+
+dataset:
+  type: "HDF5"
+  data_path: data/new_segm_dataset.hdf5
+  augmentation: False
+  valid_size: 0.2
+  batch_size: 8
+#  mean: [ 0.6735 ]
+#  std: [ 0.1342 ]
+
+  # Mean and std values for the whole dataset should be computed before
+  # starting the training using 'unet/dataset_utils/compute_mean_std.py'
+  # script. The computed values can be used during the model inference.
+  # If there is a change in the dataset (either inclusion or exclusion of
+  # image and mask pairs into the dataset), we need to recalculate the mean
+  # and std values of the dataset.
+  mean: [ 0.6795 ]
+  std: [ 0.1417 ]
+  num_workers: 0
+  # 'num_samples' is useful for testing. Irrespective of the number of
+  # samples available in the dataset, It takes only a specific number
+  # of samples from the dataset to run the test pipeline.
+  num_samples: 50
+
+criterion:
+  type: "FocalTverskyLoss"
+  alpha: 0.3
+  beta: 0.7
+  gamma: 0.75
+
+metric:
+  type: "IoUCoeff"
+
+optimizer:
+  type: "Adam"
+  learn_rate: 0.001
+
+# Decays the learning rate by ``lr_decay_rate`` every ``lr_step_size``
+# epochs. Sometimes model might be ended up within local minima because
+# of the high learning rate. A scheduler will help the model overcome
+# this by minimizing the learning rate progressively.
+
+# NOTE: instead of using step based scheduler, the adaptive scheduler
+# could be more effective to get optimal results.
+scheduler:
+  type: "stepLR"
+  lr_step_size: 10
+  lr_decay_rate: 0.1
+
+max_epochs: 5
+use_cuda: False
+path_out: "experiments"
+
+# Trainer start saving checkpoints only after the validation
+# accuracy is higher than  'min_ckp_acc'
+min_ckp_acc: 0.90
+
+# If the model metric (validation loss) starts increasing,
+# 'early stopping' will count the n consequent epochs (patience).
+# If still there is no improvement (after patience) training will
+# be terminated automatically. It saves computational power by
+# discarding the unnecessary epochs.
+early_stop_patience: 10
+
+# Start the training where you left by providing
+# previous checkpoint (not jit) path
+init_from_ckp: null
+```
 
 ```bash
 python train.py --params_path "params/unet_params.yaml"
@@ -109,17 +183,17 @@ consists of epoch number and validation accuracy like example below.
 E28_validAcc_9081_jit.ckp  >>>  E{checkpoint number}_validAcc_{validation accuracy}_{type of model}.ckp
 ```
 
-## Without params file:
+## Without params file (optional):
 Sometimes, we want to train a model in jupyter notebooks because:
 - We can apply trial and error method to select hyper-parameters quickly
-- To visually inspect data samples, how do they look? how do transforms look like? to see some stats (shapes, normalization, image ranges)
+- To visually inspect data samples, how do they look how do transforms look like: to see some stats (shapes, normalization, image ranges)
 - To see the model convergence progress
-- To debug
+- It is easy to debug and test
 
 There is an example notebook in the repo `training_notebook.ipynb`. You can use it for training.
 
 
-### How to use and create dataset object?
+### How to use and create dataset object:
 
 We can create dataset object with `json_files_path` as well as `hdf5_file_path` as shown below.
 ```bash
@@ -166,14 +240,14 @@ from unet.ml_dataset import get_dataloaders_with_params
 dataloaders = get_dataloaders_with_params(params)
 ```
 
-### How to create a model object?
+### Create a model object:
 ```bash
 from unet.ml_models import UNet, get_model_with_params
 
-# With params
+# With params file
 unet_model = get_model_with_params(params)
 
-# Without params
+# Without params file
 
 IN_CHANNELS = 1
 OUT_CLASSES = 1
@@ -181,14 +255,14 @@ OUT_CLASSES = 1
 unet_model = UNet(n_channels=IN_CHANNELS, n_classes=OUT_CLASSES)
 ```
 
-### How to create a criterion object?
+### Create a criterion object:
 ```bash
 from unet.ml_criterions import FocalTverskyLoss, get_criterion_with_params
 
-# With params
+# With params file
 criterion = get_criterion_with_params(params)
 
-# Without params
+# Without params file
 
 ALPHA = 0.3
 BETA = 0.7
@@ -197,40 +271,40 @@ GAMMA = 0.75
 criterion = FocalTverskyLoss(alpha=ALPHA, beta=BETA, gamma=GAMMA)
 ```
 
-### How to create a metric object?
+### Create a metric object:
 ```bash
 from unet.ml_metrics import IoUCoeff, get_metric_with_params
 
-# With params
+# With params file
 metric = get_metric_with_params(params)
 
-# Without params
+# Without params file
 metric = IoUCoeff()
 ```
-### How to create an optimizer object?
+### Create an optimizer object:
 ```bash
 from torch.optim import Adam, lr_scheduler
 from unet.ml_optimizers import get_optimizer_with_params
 
-# With params
+# With params file
 optimizer = get_optimizer_with_params(params, model)
 
-# Without params
+# Without params file
 
 LEARN_RATE = 0.001
 
 optimizer = Adam(unet_model.parameters(), lr=LEARN_RATE)
 ```
 
-### How to create an scheduler object?
+### Create an scheduler object:
 ```bash
 from torch.optim import lr_scheduler
 from .ml_schedulers import get_scheduler_with_params
 
-# With params
+# With params file
 scheduler = get_scheduler_with_params(params, optimizer)
 
-# Without params
+# Without params file
 
 LR_STEP_SIZE = 10
 LR_DECAY_RATE = 0.1
@@ -239,19 +313,30 @@ scheduler = lr_scheduler.StepLR(optimizer=optimizer,
                                 step_size=LR_STEP_SIZE,
                                 gamma=LR_DECAY_RATE)
 ```
-### How to create trainer object?
+
+### Create trainer object:
 ```bash
 from unet.ml_trainer import SetTrainer
 
-# With params
+# With params file
 trainer = SetTrainer.with_params(params)
 
-# Without params
+# Without params file
 
 MAX_EPOCHS = 5
 USE_CUDA = True
+
+# Trainer start saving checkpoints only after the validation
+# accuracy is higher than  'min_ckp_acc'
 MIN_CKP_ACC = 0.8
+
+# If the model metric (validation loss) starts increasing,
+# 'early stopping' will count the n consequent epochs (patience).
+# If still there is no improvement (after patience) training will
+# be terminated automatically. It saves computational power by
+# discarding the unnecessary epochs.
 EARLY_STOP_PATIENCE = 10
+
 PATH_OUT = "experiments"
 
 trainer = SetTrainer(model=unet_model,
@@ -270,3 +355,57 @@ trainer = SetTrainer(model=unet_model,
  # Training
  trainer.strat_train()
 ```
+
+# Model Training on HPC:
+
+# Model Inference using dcevent:
+1. Clone dcevent package
+```bash
+git clone git@gitlab.gwdg.de:blood_data_analysis/dcevent.git
+```
+2. Install dcevent with `ml` dependencies
+```bash
+pip install -e .[ml]
+```
+Then you can able to see `mlunet` segmentation available in dcevent
+3. See the CLI options
+```bash
+dcvent process --help
+```
+
+```bash
+Options:
+  -b, --background-method [rollmed|sparsemed]
+                                  Background computation method to use
+  -kb KEY=VALUE                   Optional ``KEY=VALUE`` argument for the
+                                  specified background method
+  -s, --segmentation-method [legacy|mlunet|otsu|std|watershed]
+                                  Segmentation method to use
+  -ks KEY=VALUE                   Optional ``KEY=VALUE`` argument for the
+                                  specified segmenter
+  -f, --feature-method [extended|legacy]
+                                  Feature extractor to use
+  -p, --pixel-size FLOAT          Set/override the pixel size for feature
+                                  extraction [µm]
+  --replace-background            Force recomputation of background data prior
+                                  to segmentation; i.e. if there are already
+                                  background data, ignore them
+  --reproduce                     Reproduce the online analysis using Shape-In
+                                  defaults and online parameters taken from
+                                  ``PATH_IN``
+  --num-frames INTEGER RANGE      Total number of frames to read from input
+                                  file; By default, the entire input file is
+                                  read  [x>=1]
+  --num-cpus INTEGER RANGE        Number of CPUs to use  [1<=x<=16]
+  --help                          Show this message and exit.
+```
+4. How to use dcevent
+```bash
+dcvent process <rtdc path_in> <optional rtdc path_out> -s <segmentation method> -ks <keyword aruguments>
+```
+5. Run dcevent on `.rtdc` dataset
+```bash
+dcvent process "test_data/test.rtdc" "test_data/test_unet.rtdc" -s mlunet -ks checkpoint = "new_model.ckp" cuda_device=True
+```
+If the user doesn't provide `checkpoint` through CLI (-ks), Default model checkpoint 
+that is stored in `dcevent/dc_segment/segm_legacy/checkpoints` (git-lfs file) folder is used.
