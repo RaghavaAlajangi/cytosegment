@@ -357,7 +357,146 @@ trainer = SetTrainer(model=unet_model,
 ```
 
 # Model Training on HPC:
+1. Clone the project 
+```bash
+git clone git@gitlab.gwdg.de:blood_data_analysis/SemanticSegmentor.git
+```
+2. change required parameters in `params/unet_params.yaml`. Especially,
+- num_workers
+- num_samples
+- max_epochs
+- use_cuda
 
+```bash
+model:
+  type: "UNet"
+  in_channels: 1
+  out_classes: 1
+  bilinear: False
+
+dataset:
+  type: "HDF5"
+  data_path: data/new_segm_dataset.hdf5
+  augmentation: False
+  valid_size: 0.2
+  batch_size: 8
+#  mean: [ 0.6735 ]
+#  std: [ 0.1342 ]
+
+  # Mean and std values for the whole dataset should be computed before
+  # starting the training using 'unet/dataset_utils/compute_mean_std.py'
+  # script. The computed values can be used during the model inference.
+  # If there is a change in the dataset (either inclusion or exclusion of
+  # image and mask pairs into the dataset), we need to recalculate the mean
+  # and std values of the dataset.
+  mean: [ 0.6795 ]
+  std: [ 0.1417 ]
+  num_workers: 0
+  # 'num_samples' is useful for testing. Irrespective of the number of
+  # samples available in the dataset, It takes only a specific number
+  # of samples from the dataset to run the test pipeline.
+  num_samples: null
+
+criterion:
+  type: "FocalTverskyLoss"
+  alpha: 0.3
+  beta: 0.7
+  gamma: 0.75
+
+metric:
+  type: "IoUCoeff"
+
+optimizer:
+  type: "Adam"
+  learn_rate: 0.001
+
+# Decays the learning rate by ``lr_decay_rate`` every ``lr_step_size``
+# epochs. Sometimes model might be ended up within local minima because
+# of the high learning rate. A scheduler will help the model overcome
+# this by minimizing the learning rate progressively.
+
+# NOTE: instead of using step based scheduler, the adaptive scheduler
+# could be more effective to get optimal results.
+scheduler:
+  type: "stepLR"
+  lr_step_size: 10
+  lr_decay_rate: 0.1
+
+max_epochs: 5
+use_cuda: False
+path_out: "experiments"
+
+# Trainer start saving checkpoints only after the validation
+# accuracy is higher than  'min_ckp_acc'
+min_ckp_acc: 0.90
+
+# If the model metric (validation loss) starts increasing,
+# 'early stopping' will count the n consequent epochs (patience).
+# If still there is no improvement (after patience) training will
+# be terminated automatically. It saves computational power by
+# discarding the unnecessary epochs.
+early_stop_patience: 10
+
+# Start the training where you left by providing
+# previous checkpoint (not jit) path
+init_from_ckp: null
+```
+3. change `train_hpc.sh` file. Especially,
+- JOB NAME
+- EMAIL ADDRESS
+```bash
+#!/bin/bash -l
+# Standard output and error:
+#SBATCH -o out.%j
+#SBATCH -e err.%j
+# Initial working directory:
+#SBATCH -D ./
+# Job Name:
+#SBATCH -J <JOB NAME>
+# Queue:
+#SBATCH --partition=gpu     # If using both GPUs of a node
+# Node feature:
+#SBATCH --constraint="gpu"
+#SBATCH --gres=gpu:2        # If using both GPUs of a node
+# Number of nodes and MPI tasks per node:
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-core=2
+#SBATCH --cpus-per-task=36
+#SBATCH --mem=100GB
+#SBATCH --mail-type=all
+#SBATCH --mail-user=<EMAIL ADDRESS>
+#
+# wall clock limit
+#SBATCH --time=24:00:00
+
+module purge
+module load anaconda/3/2021.11
+module load cuda/11.2
+#Pytorch
+module load pytorch/gpu-cuda-11.2/1.9.0
+
+pip install virtualenv
+virtualenv --system-site-packages venv --python=python3.9.7
+. venv/bin/activate
+
+pip install albumentations
+pip install h5py
+
+echo "starting training .."
+
+srun python train.py --params_path "params/unet_params.yaml"
+
+echo "Training finished!"
+```
+4. Copy the loacl `SemanticSegmentor` repo into HPC
+```bash
+scp -r SemanticSegmentor/ <username>@raven.mpcdf.mpg.de:/u/<username>
+```
+5. Open the HPC terminal, go to the `SemanticSegmentor` folder, and then run the below command.
+```bash
+sbatch train_hpc.sh
+```
 # Model Inference using dcevent:
 1. Clone dcevent package
 ```bash

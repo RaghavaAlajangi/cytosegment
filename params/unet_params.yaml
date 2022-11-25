@@ -21,11 +21,13 @@ dataset:
   # and std values of the dataset.
   mean: [ 0.6795 ]
   std: [ 0.1417 ]
+  # how many subprocesses to use for data loading. 0 means that the data
+  # will be loaded in the main process.
   num_workers: 0
   # 'num_samples' is useful for testing. Irrespective of the number of
   # samples available in the dataset, It takes only a specific number
   # of samples from the dataset to run the test pipeline.
-  num_samples: 50
+  num_samples: null
 
 criterion:
   type: "FocalTverskyLoss"

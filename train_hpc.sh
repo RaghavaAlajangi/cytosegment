@@ -1,11 +1,11 @@
 #!/bin/bash -l
 # Standard output and error:
-#SBATCH -o experiments/out.%j
-#SBATCH -e experiments/err.%j
+#SBATCH -o out.%j
+#SBATCH -e err.%j
 # Initial working directory:
 #SBATCH -D ./
 # Job Name:
-#SBATCH -J unet_experiment
+#SBATCH -J <JOB NAME>
 # Queue:
 #SBATCH --partition=gpu     # If using both GPUs of a node
 # Node feature:
@@ -18,7 +18,7 @@
 #SBATCH --cpus-per-task=36
 #SBATCH --mem=100GB
 #SBATCH --mail-type=all
-#SBATCH --mail-user=raghava.alajangi@mpl.mpg.de
+#SBATCH --mail-user=<EMAIL ADDRESS>
 #
 # wall clock limit
 #SBATCH --time=24:00:00
