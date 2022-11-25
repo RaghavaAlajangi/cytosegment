@@ -119,8 +119,8 @@ class SetTrainer:
                 predict_list.append(predicts)
                 target_list.append(labels)
 
-        predict_torch = torch.concat(predict_list, dim=0)
-        target_torch = torch.concat(target_list, dim=0)
+        predict_torch = torch.cat(predict_list, dim=0)
+        target_torch = torch.cat(target_list, dim=0)
 
         scores = self.metric(predict_torch, target_torch)
         loss_avg = float(np.stack(loss_list).mean())
