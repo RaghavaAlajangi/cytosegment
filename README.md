@@ -31,8 +31,12 @@ and segmentation models that are being trained before as estimates to generate t
 version of the label, and then we edit manually if it still does not meet the requirements.
 
 ### Step-1:
-The `.json` files (that can be opened in labelme-GUI) are produced with the help of bloody_bunny 
-(new model with minmax normalization) and unet model predictions. Use `rtdc_to_json.py` script to do so. 
+- Take a `.rtdc` dataset that you want to include in the training data.
+  - ``NOTE:`` dataset should contain:
+  - `image_bg` and `ml_score` features (dcevent & bloody_bunny predictions)
+- Produce `.json` files (that can be opened in labelme-GUI) with the help of bloody_bunny 
+  (new model with minmax normalization) and unet model predictions. 
+- Use `rtdc_to_json.py` script to do so. 
 - To see the options:
 
 ```bash
@@ -60,6 +64,24 @@ Options:
 - To use:
 ```bash
 python unet/rtdc_to_json.py --path_in "C:/ralajan/rtdc_data_1/test.rtdc" -s 0.8 -m ml_score_r1f=10 -c
+```
+- The above command randomly extracts 10 `ml_score_r1f` events (images, image_bg, and json files) 
+that have `ml_score` more than 0.8 (argument `-s 0.8`) from the given `rtdc` dataset.
+- Two folders will be created namely `image_bg` and `labelme` 
+- The extracted events (image, image_bg, and json files) are saved with names consisting of dataset name, 
+frame number, and index number as follows.
+```bash
+# In labelme folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img.png  >>  image file
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img_bg.json  >>  json file
+
+# In image_bg folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img_bg.png  >>  image_bg file
+
+#Example:
+BH116_01_frm_746198_idx_179581_img.png
+BH116_01_frm_746198_idx_179581_img.json
+BH116_01_frm_746198_idx_179581_img_bg.png
 ```
 ### Step-2:
 Manual editing  
@@ -175,7 +197,7 @@ init_from_ckp: null
 python train.py --params_path "params/unet_params.yaml"
 ```
 
-During training, a folder (`experiments`) will be created to save the experiments. Moreover, 
+During training, a folder (`experiments`) will be created to save the outcome of experiments. Moreover, 
 sub-folders will be created based on date and time of the experiment, and model checkpoints 
 (at different validation accuracies), train logs, and plots will be saved there. Checkpoint path 
 consists of epoch number and validation accuracy like example below.
@@ -296,7 +318,7 @@ LEARN_RATE = 0.001
 optimizer = Adam(unet_model.parameters(), lr=LEARN_RATE)
 ```
 
-### Create an scheduler object:
+### Create a scheduler object:
 ```bash
 from torch.optim import lr_scheduler
 from .ml_schedulers import get_scheduler_with_params
@@ -314,7 +336,7 @@ scheduler = lr_scheduler.StepLR(optimizer=optimizer,
                                 gamma=LR_DECAY_RATE)
 ```
 
-### Create trainer object:
+### Create a trainer object:
 ```bash
 from unet.ml_trainer import SetTrainer
 
@@ -357,146 +379,33 @@ trainer = SetTrainer(model=unet_model,
 ```
 
 # Model Training on HPC:
-1. Clone the project 
+1. Clone the project in the local machine
 ```bash
 git clone git@gitlab.gwdg.de:blood_data_analysis/SemanticSegmentor.git
 ```
 2. change required parameters in `params/unet_params.yaml`. Especially,
-- num_workers
-- num_samples
-- max_epochs
-- use_cuda
+- num_workers >  to `8`
+- num_samples > to `null` 
+- max_epochs > `100` may be
+- use_cuda > `True`
 
+3. change the following information in `train_hpc.sh` file.
+- `JOB NAME`
+- ``EMAIL ADDRESS``
+
+4. Copy the loacl `SemanticSegmentor` repo into HPC by running the below command in `bash` terminal
 ```bash
-model:
-  type: "UNet"
-  in_channels: 1
-  out_classes: 1
-  bilinear: False
-
-dataset:
-  type: "HDF5"
-  data_path: data/new_segm_dataset.hdf5
-  augmentation: False
-  valid_size: 0.2
-  batch_size: 8
-#  mean: [ 0.6735 ]
-#  std: [ 0.1342 ]
-
-  # Mean and std values for the whole dataset should be computed before
-  # starting the training using 'unet/dataset_utils/compute_mean_std.py'
-  # script. The computed values can be used during the model inference.
-  # If there is a change in the dataset (either inclusion or exclusion of
-  # image and mask pairs into the dataset), we need to recalculate the mean
-  # and std values of the dataset.
-  mean: [ 0.6795 ]
-  std: [ 0.1417 ]
-  num_workers: 0
-  # 'num_samples' is useful for testing. Irrespective of the number of
-  # samples available in the dataset, It takes only a specific number
-  # of samples from the dataset to run the test pipeline.
-  num_samples: null
-
-criterion:
-  type: "FocalTverskyLoss"
-  alpha: 0.3
-  beta: 0.7
-  gamma: 0.75
-
-metric:
-  type: "IoUCoeff"
-
-optimizer:
-  type: "Adam"
-  learn_rate: 0.001
-
-# Decays the learning rate by ``lr_decay_rate`` every ``lr_step_size``
-# epochs. Sometimes model might be ended up within local minima because
-# of the high learning rate. A scheduler will help the model overcome
-# this by minimizing the learning rate progressively.
-
-# NOTE: instead of using step based scheduler, the adaptive scheduler
-# could be more effective to get optimal results.
-scheduler:
-  type: "stepLR"
-  lr_step_size: 10
-  lr_decay_rate: 0.1
-
-max_epochs: 5
-use_cuda: False
-path_out: "experiments"
-
-# Trainer start saving checkpoints only after the validation
-# accuracy is higher than  'min_ckp_acc'
-min_ckp_acc: 0.90
-
-# If the model metric (validation loss) starts increasing,
-# 'early stopping' will count the n consequent epochs (patience).
-# If still there is no improvement (after patience) training will
-# be terminated automatically. It saves computational power by
-# discarding the unnecessary epochs.
-early_stop_patience: 10
-
-# Start the training where you left by providing
-# previous checkpoint (not jit) path
-init_from_ckp: null
+scp -r SemanticSegmentor/ <USERNAME>@raven.mpcdf.mpg.de:/u/<USERNAME>
 ```
-3. change `train_hpc.sh` file. Especially,
-- JOB NAME
-- EMAIL ADDRESS
-```bash
-#!/bin/bash -l
-# Standard output and error:
-#SBATCH -o out.%j
-#SBATCH -e err.%j
-# Initial working directory:
-#SBATCH -D ./
-# Job Name:
-#SBATCH -J <JOB NAME>
-# Queue:
-#SBATCH --partition=gpu     # If using both GPUs of a node
-# Node feature:
-#SBATCH --constraint="gpu"
-#SBATCH --gres=gpu:2        # If using both GPUs of a node
-# Number of nodes and MPI tasks per node:
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --ntasks-per-core=2
-#SBATCH --cpus-per-task=36
-#SBATCH --mem=100GB
-#SBATCH --mail-type=all
-#SBATCH --mail-user=<EMAIL ADDRESS>
-#
-# wall clock limit
-#SBATCH --time=24:00:00
-
-module purge
-module load anaconda/3/2021.11
-module load cuda/11.2
-#Pytorch
-module load pytorch/gpu-cuda-11.2/1.9.0
-
-pip install virtualenv
-virtualenv --system-site-packages venv --python=python3.9.7
-. venv/bin/activate
-
-pip install albumentations
-pip install h5py
-
-echo "starting training .."
-
-srun python train.py --params_path "params/unet_params.yaml"
-
-echo "Training finished!"
-```
-4. Copy the loacl `SemanticSegmentor` repo into HPC
-```bash
-scp -r SemanticSegmentor/ <username>@raven.mpcdf.mpg.de:/u/<username>
-```
-5. Open the HPC terminal, go to the `SemanticSegmentor` folder, and then run the below command.
+5. Open the HPC terminal, go to the `SemanticSegmentor` folder, and then run the below command to for training.
 ```bash
 sbatch train_hpc.sh
 ```
+6. Copy the experiments (trained models) from HPC to local drive
+```bash
+scp -r <USERNAME>@raven.mpcdf.mpg.de:/u/<USERNAME>/SemanticSegmentor/experiments <path to local directory>
+```
+
 # Model Inference using dcevent:
 1. Clone dcevent package
 ```bash
@@ -507,9 +416,10 @@ git clone git@gitlab.gwdg.de:blood_data_analysis/dcevent.git
 pip install -e .[ml]
 ```
 Then you can able to see `mlunet` segmentation available in dcevent
+
 3. See the CLI options
 ```bash
-dcvent process --help
+dcevent process --help
 ```
 
 ```bash
@@ -540,11 +450,29 @@ Options:
 ```
 4. How to use dcevent
 ```bash
-dcvent process <rtdc path_in> <optional rtdc path_out> -s <segmentation method> -ks <keyword aruguments>
+dcevent process <rtdc path_in> <optional rtdc path_out> -s <segmentation method> -ks <keyword aruguments>
 ```
-5. Run dcevent on `.rtdc` dataset
+
 ```bash
-dcvent process "test_data/test.rtdc" "test_data/test_unet.rtdc" -s mlunet -ks checkpoint = "new_model.ckp" cuda_device=True
+NOTE: `-ks` is not sepcifc to the `mlunet`. Arguments that are used by other segmentors are also passed 
+via -ks. However, for `mlunet`, you might want to pass particulary two arguments:
+
+- checkpoint = path to the model checkpoint (.ckp or .pth file)
+- cuda_device = bool
+```
+5. Run dcevent on `.rtdc` dataset (you can choose one option below)
+
+- Machine without cuda & with default checkpoint
+```bash
+dcevent process "test_data/test.rtdc" "test_data/test_unet.rtdc" -s mlunet
+```
+- Machine with cuda & default checkpoint
+```bash
+dcevent process "test_data/test.rtdc" "test_data/test_unet.rtdc" -s mlunet -c
+```
+- Machine with cuda & with new checkpoint
+```bash
+dcevent process "test_data/test.rtdc" "test_data/test_unet.rtdc" -s mlunet -ks checkpoint = "new_model.ckp" cuda_device=True
 ```
 If the user doesn't provide `checkpoint` through CLI (-ks), Default model checkpoint 
-that is stored in `dcevent/dc_segment/segm_legacy/checkpoints` (git-lfs file) folder is used.
+that is stored in `dcevent/dc_segment/segm_ml_unet/checkpoints` (git-lfs file) folder is used.

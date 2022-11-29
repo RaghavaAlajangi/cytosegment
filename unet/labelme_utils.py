@@ -137,3 +137,15 @@ def create_json(img, cnts, cell_labels, img_file_path,
     # Save json file
     with open(json_file, "w") as handle:
         json.dump(json_dict, handle, indent=2)
+
+
+def get_img_bg_from_rtdc_and_json_file(rtdc_dataset, json_files):
+    frames = np.array(rtdc_dataset['frame'])
+    image_bgs = rtdc_dataset['image_bg']
+    for jfile in json_files:
+        frm = float((str(jfile).split('frm_')[1]).split('_idx')[0])
+        idx = np.where(frames == frm)
+        img_bg = image_bgs[idx][0]
+        img_bg_file_name = str(jfile).replace('.json', '_img_bg.png')
+        img_bg_pil = Image.fromarray(img_bg)
+        img_bg_pil.save(img_bg_file_name)
