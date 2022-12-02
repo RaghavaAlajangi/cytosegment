@@ -37,7 +37,7 @@ setup(
         'torch>=1.12.0',
         'torchvision>=0.13.0',
     ],
-    python_requires=">=3.9",
+    python_requires='>=3.9, <4',
     keywords=["RT-DC", "segmentation"],
     classifiers=['Operating System :: OS Independent',
                  'Programming Language :: Python :: 3',

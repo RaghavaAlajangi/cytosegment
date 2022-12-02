@@ -84,7 +84,8 @@ BH116_01_frm_746198_idx_179581_img.json
 BH116_01_frm_746198_idx_179581_img_bg.png
 ```
 ### Step-2:
-Manual editing  
+Manual editing [see the wiki page](https://gitlab.gwdg.de/blood_data_analysis/blood_data_analysis/-/wikis/Analysis/MachineLearning/CellSegmentation/segmentation-labeling-guidelines) 
+
 
 ### Step-3:
 
@@ -208,7 +209,7 @@ E28_validAcc_9081_jit.ckp  >>>  E{checkpoint number}_validAcc_{validation accura
 ## Without params file (optional):
 Sometimes, we want to train a model in jupyter notebooks because:
 - We can apply trial and error method to select hyper-parameters quickly
-- To visually inspect data samples, how do they look how do transforms look like: to see some stats (shapes, normalization, image ranges)
+- To visually inspect data samples before and after transformations, to see some stats (shapes, normalization, image ranges)
 - To see the model convergence progress
 - It is easy to debug and test
 
@@ -407,6 +408,7 @@ scp -r <USERNAME>@raven.mpcdf.mpg.de:/u/<USERNAME>/SemanticSegmentor/experiments
 ```
 
 # Model Inference using dcevent:
+## Locally:
 1. Clone dcevent package
 ```bash
 git clone git@gitlab.gwdg.de:blood_data_analysis/dcevent.git
@@ -476,3 +478,5 @@ dcevent process "test_data/test.rtdc" "test_data/test_unet.rtdc" -s mlunet -ks c
 ```
 If the user doesn't provide `checkpoint` through CLI (-ks), Default model checkpoint 
 that is stored in `dcevent/dc_segment/segm_ml_unet/checkpoints` (git-lfs file) folder is used.
+
+## On HPC:

@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 from scipy import interpolate
 from skimage.measure import grid_points_in_poly
+# from shapely.geometry import Polygon, Point
 
 
 def img_b64_to_arr(img_b64):
@@ -30,7 +31,31 @@ def img_arr_to_b64(img_arr):
     return img_b64
 
 
-def json_to_mask(json_list, correction=0.4):
+# def polygon_handler(x_cords, y_cords, factor=0.10, shrink_mode=True):
+#     shapely_poly = Polygon([[x, y] for x, y in zip(x_cords, y_cords)])
+#
+#     xs = list(shapely_poly.exterior.coords.xy[0])
+#     ys = list(shapely_poly.exterior.coords.xy[1])
+#
+#     x_center = 0.5 * min(xs) + 0.5 * max(xs)
+#     y_center = 0.5 * min(ys) + 0.5 * max(ys)
+#     min_corner = Point(min(xs), min(ys))
+#     max_corner = Point(max(xs), max(ys))
+#     center = Point(x_center, y_center)
+#     shrink_distance = center.distance(min_corner) * factor
+#
+#     if shrink_mode:
+#         resized_ploy = shapely_poly.buffer(-shrink_distance)
+#     else:
+#         resized_ploy = shapely_poly.buffer(shrink_distance)
+#
+#     x, y = resized_ploy.exterior.xy
+#     x_resized = np.array(x.tolist())
+#     y_resized = np.array(y.tolist())
+#     return x_resized, y_resized
+
+
+def json_to_mask(json_list, correction=0.5):
     images, masks = [], []
     for json_file in json_list:
         json_obj = open(json_file)
@@ -44,6 +69,11 @@ def json_to_mask(json_list, correction=0.4):
                 poly = np.array(cell["points"])
                 x, y = poly[:, 0], poly[:, 1]
                 x, y = x-correction, y-correction
+                # x, y = polygon_handler(x, y, factor=0.023, shrink_mode=False)
+                # If any coordinate 2 px close to the right edge of the event
+                # image, make sure it is on the edge
+                if np.any(x > 248):
+                    x[x > 248] = 250
                 xy = np.array([[p[1], p[0]] for p in zip(x, y)])
                 assert len(xy) > 2, "Polygon must have points more than 2"
                 mask = grid_points_in_poly(image.shape[:2], xy)
@@ -67,30 +97,30 @@ def get_labeme_shape(xi, yi, cell_lbl):
     return cell
 
 
-def create_json(img, cnts, cell_labels, img_file_path,
-                only_valid=False, x_off=0.5, y_off=0.5):
+def create_json(img, cnts, cell_labels, img_file_path, only_valid=False,
+                 x_off=0.5, y_off=0.5, interpolate_rate=3):
     img_height, img_width = img.shape
     shapes_list = []
 
     for cnt, cell_lbl in zip(cnts, cell_labels):
         # Computed contours (measure.find_contours) have integer type
         # coordinates but when we create a labelme file (JSON), labelme
-        # converts these coordinates into float type. Due to this, there
+        # converts these coordinates into float64 type. Due to this, there
         # is a shift in labelme contour. To avoid this, offset value is
         # added to the coordinates.
         x, y = cnt[:, 1] + x_off, cnt[:, 0] + y_off
 
-        # Interpolate x, y coords to find the smooth curve
+        # Interpolate x, y cords to find the smooth curve
         warnings.filterwarnings("error")
         with warnings.catch_warnings(record=True) as _:
             warnings.simplefilter("always")
             tck = interpolate.splprep([x, y], k=2, s=0.4, per=True)[0]
 
-        # Find uniformly distributed limited number of coords
+        # Find uniformly distributed limited number of cords
         if len(x) < 50:
-            num_points = int(len(x) / 3)
+            num_points = int(len(x) / 2)
         else:
-            num_points = int(len(x) / 5)
+            num_points = int(len(x) / 3)
 
         xi, yi = interpolate.splev(np.linspace(0, 1, num_points), tck)
 
@@ -104,12 +134,12 @@ def create_json(img, cnts, cell_labels, img_file_path,
             # xi[xi > 249] = 250) fix them to be on the boundary.
 
             if only_valid:
-                # Consider all cells with in the frame
+                # Including all cells within the frame as valid cells
                 if np.all(xi < 248) and np.all(xi > 2):
                     shape = get_labeme_shape(xi, yi, cell_lbl)
                     shapes_list.append(shape)
             else:
-                # Include cells at the boundary of the frame with
+                # Including cells at the boundary of the frame with
                 # ``_invalid`` string attached to the label
                 if np.any(xi > 248) or np.any(xi < 2):
                     xi[xi < 2] = 0.0
@@ -142,10 +172,10 @@ def create_json(img, cnts, cell_labels, img_file_path,
 def get_img_bg_from_rtdc_and_json_file(rtdc_dataset, json_files):
     frames = np.array(rtdc_dataset['frame'])
     image_bgs = rtdc_dataset['image_bg']
-    for jfile in json_files:
-        frm = float((str(jfile).split('frm_')[1]).split('_idx')[0])
+    for json_file in json_files:
+        frm = float((str(json_file).split('frm_')[1]).split('_idx')[0])
         idx = np.where(frames == frm)
         img_bg = image_bgs[idx][0]
-        img_bg_file_name = str(jfile).replace('.json', '_img_bg.png')
+        img_bg_file_name = str(json_file).replace('.json', '_img_bg.png')
         img_bg_pil = Image.fromarray(img_bg)
         img_bg_pil.save(img_bg_file_name)
