@@ -4,6 +4,7 @@ venv/
 # Training data
 TEST_DATA/
 experiments/
+data/data_labelme
 
 
 # Byte-compiled / optimized / DLL files
@@ -12,5 +13,7 @@ __pycache__
 .ipynb
 .idea/
 .ipynb_checkpoints/
+
+
 
 test_init.py

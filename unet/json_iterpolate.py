@@ -1,5 +1,5 @@
-import io
 import base64
+import io
 import json
 from pathlib import Path
 from PIL import Image
@@ -39,7 +39,7 @@ def img_pil_to_data(img_pil):
     return img_b64.decode("utf-8")
 
 
-def interpolate_json_files(json_files_list, out_path, times=3):
+def interpolate_json_files(json_files_list, out_path, interpolate_rate=20):
     for old_json_path in json_files_list:
         json_obj = open(old_json_path)
         annotation = json.load(json_obj)
@@ -50,13 +50,13 @@ def interpolate_json_files(json_files_list, out_path, times=3):
         old_height = annotation["imageHeight"]
         old_width = annotation["imageWidth"]
 
-        new_height = int(old_height * times)
-        new_width = int(old_width * times)
+        new_height = int(old_height * interpolate_rate)
+        new_width = int(old_width * interpolate_rate)
 
         old_img_pil = img_data_to_pil(old_img_data)
 
         new_img_pil = old_img_pil.resize((new_width, new_height),
-                                         Image.Resampling.BICUBIC)
+                                         Image.Resampling.NEAREST)
 
         new_img_data = img_pil_to_data(new_img_pil)
 
@@ -69,12 +69,13 @@ def interpolate_json_files(json_files_list, out_path, times=3):
             new_x = old_x * (new_height / old_height)
             new_y = old_y * (new_width / old_width)
 
-            new_poly = [[i, j] for i, j in zip(new_x, new_y)]
+            new_poly = [[x, y] for x, y in zip(new_x, new_y)]
             cell["points"] = new_poly
             new_shapes.append(cell)
 
-        new_img_path = out_path + "/" + str(old_img_path)
-        new_json_path = out_path + "/" + str(old_json_path.name)
+        new_img_path = str(old_img_path).replace('.png', '_interpolated.png')
+        new_json_path = str(old_json_path.name).replace('.json',
+                                                        '_interpolated.json')
 
         annotation["imagePath"] = new_img_path
         annotation["imageData"] = new_img_data
@@ -83,14 +84,23 @@ def interpolate_json_files(json_files_list, out_path, times=3):
         annotation["imageHeight"] = new_height
         annotation["imageWidth"] = new_width
 
-        new_img_pil.save(new_img_path)
-        with open(new_json_path, "w") as handle:
+        # Save interpolated image
+        new_img_pil.save(out_path + "/" + new_img_path)
+        # Save interpolated json file
+        with open(out_path + "/" + new_json_path, "w") as handle:
             json.dump(annotation, handle, indent=2)
 
 
 if __name__ == "__main__":
-    p = r'C:\Raghava_local\datasets'
+    path = r'U:\Members\Raghava\00_SemanticSegmentation\UNET_annotations'
 
-    json_files = [p for p in Path(p).rglob("*img.json")]
+    import os
 
-    interpolate_json_files(p)
+    for i in os.listdir(path)[:]:
+        if os.path.isdir(os.path.join(path, i)):
+            j = os.path.join(path, i)
+            os.makedirs(os.path.join(j, 'interpolated_labelme'), exist_ok=True)
+
+            json_files = [p for p in Path(j).rglob("*img.json")]
+            interpolate_json_files(json_files,
+                                   os.path.join(j, 'interpolated_labelme'))

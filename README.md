@@ -30,6 +30,7 @@ which means, instead of creating segmented labels from scratch, we use classific
 and segmentation models that are being trained before as estimates to generate the initial 
 version of the label, and then we edit manually if it still does not meet the requirements.
 
+``NOTE:`` To run the data preparation pipeline, use `test.rtdc` dataset from `data` directory
 ### Step-1:
 - Take a `.rtdc` dataset that you want to include in the training data.
   - ``NOTE:`` dataset should contain:
@@ -61,9 +62,9 @@ Options:
   -c, --is_cuda          Specify whether cuda device available or not
   --help                 Show this message and exit.
 ```
-- To use:
+- Use the test dataset that is stored (`git lfs`) in data folder
 ```bash
-python unet/rtdc_to_json.py --path_in "C:/ralajan/rtdc_data_1/test.rtdc" -s 0.8 -m ml_score_r1f=10 -c
+python unet/rtdc_to_json.py --path_in "data/test.rtdc" -s 0.8 -m ml_score_r1f=10 -c
 ```
 - The above command randomly extracts 10 `ml_score_r1f` events (images, image_bg, and json files) 
 that have `ml_score` more than 0.8 (argument `-s 0.8`) from the given `rtdc` dataset.
@@ -84,7 +85,7 @@ BH116_01_frm_746198_idx_179581_img.json
 BH116_01_frm_746198_idx_179581_img_bg.png
 ```
 ### Step-2:
-Manual editing [see the wiki page](https://gitlab.gwdg.de/blood_data_analysis/blood_data_analysis/-/wikis/Analysis/MachineLearning/CellSegmentation/segmentation-labeling-guidelines) 
+See the Manual editing [guidelines](https://gitlab.gwdg.de/blood_data_analysis/blood_data_analysis/-/wikis/Analysis/MachineLearning/CellSegmentation/segmentation-labeling-guidelines) 
 
 
 ### Step-3:
@@ -103,7 +104,7 @@ Options:
 ```
 - To use:
 ```bash
-python unet/json_to_hdf5.py --path_in "C:/ralajan/rtdc_data_1"
+python unet/json_to_hdf5.py --path_in "data/data_labelme" --path_out "data/data_labelme/test.hdf5"
 ```
 
 `NOTE:`Creating `.hdf5` from `.json` files is optional because we can train 
