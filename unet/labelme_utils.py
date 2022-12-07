@@ -7,7 +7,7 @@ import warnings
 
 import numpy as np
 from scipy.interpolate import splprep, splev
-from skimage.measure import grid_points_in_poly
+from skimage.measure import find_contours, grid_points_in_poly
 
 
 def img_b64_to_arr(img_b64):
@@ -40,7 +40,7 @@ def json_to_mask(json_list, interpolate_rate=20):
         img = annotation["imageData"]
         inter_height = annotation["imageHeight"]
         inter_width = annotation["imageWidth"]
-        org_height = int(inter_height/interpolate_rate)
+        org_height = int(inter_height / interpolate_rate)
         org_width = int(inter_width / interpolate_rate)
         if len(cells) != 0 and img is not None:
             image = img_b64_to_arr(img)
@@ -79,7 +79,7 @@ def get_labeme_shape(xi, yi, cell_lbl):
     return cell
 
 
-def create_json(image, contours, cell_labels, img_file_path,
+def create_json(image, unet_pred, cell_labels, img_file_path,
                 only_valid=False, correction=0.5, interpolate_rate=20):
     old_height, old_width = image.shape[:2]
 
@@ -94,15 +94,21 @@ def create_json(image, contours, cell_labels, img_file_path,
     new_img_arr = np.array(new_img_pil)
     image_data = img_arr_to_b64(new_img_arr).decode("utf-8")
 
-    shapes_list = []
+    contours = find_contours(unet_pred, 0.2,
+                             fully_connected="low",
+                             positive_orientation="high")
 
+
+
+    shapes_list = []
     for cnt, cell_lbl in zip(contours, cell_labels):
         # Computed contours (measure.find_contours) have integer type
         # coordinates but when we create a labelme file (JSON), labelme
         # converts these coordinates into float64 type. Due to this, there
         # is a shift in labelme contour. To avoid this, offset value is
         # added to the coordinates.
-        old_x, old_y = cnt[:, 1] + correction, cnt[:, 0] + correction
+        old_x = cnt[:, 1] + correction
+        old_y = cnt[:, 0] + correction
 
         # Interpolate x, y cords to find the smooth curve
         warnings.filterwarnings("error")
@@ -146,25 +152,25 @@ def create_json(image, contours, cell_labels, img_file_path,
                 shape = get_labeme_shape(new_x, new_y, cell_lbl)
                 shapes_list.append(shape)
 
-    # Create paths for interpolated json and image files to be saved
-    json_path = str(img_file_path).replace(".png", "_interpolated.json")
-    new_img_path = str(img_file_path).replace(".png", "_interpolated.png")
+        # Create paths for interpolated json and image files to be saved
+        json_path = str(img_file_path).replace(".png", "_interpolated.json")
+        new_img_path = str(img_file_path).replace(".png", "_interpolated.png")
 
-    # Save image
-    new_img_pil.save(str(new_img_path))
+        # Save image
+        new_img_pil.save(str(new_img_path))
 
-    # Create labelme json object
-    json_dict = {"version": "5.0.1",
-                 "flags": {},
-                 "shapes": shapes_list,
-                 "imagePath": Path(new_img_path).name,
-                 "imageData": image_data,
-                 "imageHeight": new_height,
-                 "imageWidth": new_width}
+        # Create labelme json object
+        json_dict = {"version": "5.0.1",
+                     "flags": {},
+                     "shapes": shapes_list,
+                     "imagePath": Path(new_img_path).name,
+                     "imageData": image_data,
+                     "imageHeight": new_height,
+                     "imageWidth": new_width}
 
-    # Save json file
-    with open(json_path, "w") as handle:
-        json.dump(json_dict, handle, indent=2)
+        # Save json file
+        with open(json_path, "w") as handle:
+            json.dump(json_dict, handle, indent=2)
 
 
 def get_img_bg_from_rtdc_and_json_file(rtdc_dataset, json_files):

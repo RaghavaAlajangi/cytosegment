@@ -2,124 +2,18 @@ from pathlib import Path
 from PIL import Image
 import random
 
-import albumentations as A
 import click
 import dclab
 import numpy as np
 
-from skimage import measure
-from skimage.filters import threshold_otsu
-import torch
-from torch import from_numpy
-from torchvision import transforms
-from torchvision.transforms import Normalize
-
+from inferencer import load_model
+from inferencer import get_bnet_predictions, get_unet_prediction
+from inferencer import get_transformed_image
+from inferencer import extract_event_masks, extract_patch_tensors
 from labelMap import id_to_class
 from labelme_utils import create_json
 
 models_path = Path(__file__).parents[1] / "models"
-
-
-class ToTensorMinMax(object):
-    def __init__(self):
-        pass
-
-    def __call__(self, image):
-        min_image, max_image = image.min(), image.max()
-        tensor = torch.tensor((image - min_image)
-                              / (max_image - min_image),
-                              dtype=torch.float32)
-        return tensor.unsqueeze(0)
-
-
-def load_model(ckp_path_jit, use_cuda):
-    device = torch.device("cuda" if use_cuda else "cpu")
-    model_jit = torch.jit.load(ckp_path_jit, map_location=device)
-    model_jit.eval()
-    model_jit = torch.jit.optimize_for_inference(model_jit)
-    return model_jit
-
-
-def crop_image(img, center_cords, crop_size=80,
-               max_x=250, max_y=80):
-    sh = crop_size // 2
-    px, py = center_cords
-    px = np.minimum(np.maximum(px, sh), max_x - sh).astype(np.int16)
-    py = np.minimum(np.maximum(py, sh), max_y - sh).astype(np.int16)
-    img_cropped = img[py - sh:py + sh, px - sh:px + sh]
-    return img_cropped
-
-
-def extract_patch_tensors(image_corr, masks, mean=0.5, std=0.25):
-    transform = transforms.Compose([ToTensorMinMax(),
-                                    Normalize(mean=mean, std=std)
-                                    ])
-    patch_tensors = []
-    for m in masks:
-        M = measure.moments(m)
-        px = M[0, 1] / M[0, 0]
-        py = M[1, 0] / M[0, 0]
-        # Apply transform --> get the org image tensor
-        trans_img_corr = transform(image_corr)
-        trans_img_corr = trans_img_corr.squeeze(0)
-        # Crop the org img tensor into patches based on cords
-        patch_tensor = crop_image(trans_img_corr, (px, py))
-        # Add an extra channel [H, W] --> [1, H, W]
-        patch_tensor = patch_tensor.unsqueeze(0)
-        patch_tensors.append(patch_tensor)
-    return patch_tensors
-
-
-def extract_masks_polygons(unet_pred):
-    polygons = measure.find_contours(unet_pred, 0.2,
-                                     fully_connected="low",
-                                     positive_orientation="high")
-
-    thresh = threshold_otsu(unet_pred)
-    bin_pred = (unet_pred > thresh)
-    segm, num = measure.label(bin_pred, background=0, return_num=True)
-    masks = []
-    for n in range(num):
-        mask_n = segm == n + 1
-        masks.append(mask_n)
-    return masks, polygons
-
-
-def min_max_norm(img):
-    return (img - img.min()) / (img.max() - img.min())
-
-
-def get_unet_prediction(image, model, use_cuda,
-                        mean=None, std=None):
-    mean = [0.6735] if mean is None else std
-    std = [0.1342] if std is None else std
-
-    device = torch.device("cuda" if use_cuda else "cpu")
-    image = min_max_norm(image)
-    compose_obj = A.Compose([A.Normalize(mean, std, max_pixel_value=1.)])
-    transformed = compose_obj(image=image)
-    img_tensor = from_numpy(transformed["image"])
-    im_ten = img_tensor.unsqueeze(0).unsqueeze(0)
-    im_ten = im_ten.to(device)
-    pred = model(im_ten)
-    pred = pred.squeeze(0).squeeze(0).detach().cpu().numpy()
-    return pred
-
-
-def get_bnet_predictions(patches, mnet, use_cuda):
-    device = torch.device("cuda" if use_cuda else "cpu")
-    # Stack list of patches into batch
-    # [(1, 80, 80), (1, 80, 80)] --> [2, 1, 80, 80]
-    min_patch_batch = torch.stack(patches, dim=0)
-    input_tensor = min_patch_batch.to(device)
-    output = mnet(input_tensor)
-    # Get the probabilities of the classes
-    output = torch.softmax(output, dim=1)
-    # Get the maximum probability index
-    labels = torch.argmax(output, dim=-1)
-    # Convert torch labels into int
-    preds = [int(i) for i in labels]
-    return preds
 
 
 @click.command(help="This script helps to create JSON files from RTDC dataset")
@@ -222,17 +116,26 @@ def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
                     frm = rtdc_ds["frame"][idx]
                     ido = rtdc_ds["index_online"][idx]
 
+                    # Get transformed image tensor
+                    img_tensor = get_transformed_image(img, mean=0.6735,
+                                                       std=0.1342)
+
+                    # Get the unet prediction of the image
+                    unet_pred = get_unet_prediction(img_tensor, unet, use_cuda)
+
+                    # Split unet prediction into individual event masks
+                    event_masks = extract_event_masks(unet_pred)
+
                     # Compute img_corr feature
                     img_cor = np.array(img, dtype=int) - img_bg + img_bg.mean()
 
-                    # Get the unet prediction of the image
-                    segm_pred = get_unet_prediction(img, unet, use_cuda)
+                    # Get the transformed image_cor tensor
+                    img_cor_tensor = get_transformed_image(img_cor, mean=0.5,
+                                                           std=0.25)
 
-                    # Split unet prediction into individual cell masks
-                    msks, polygons = extract_masks_polygons(segm_pred)
-
-                    # Extract cell patches based on image, image_bg, and mask
-                    patch_tens = extract_patch_tensors(img_cor, msks)
+                    # Extract cell patches based on image_corr and event masks
+                    patch_tens = extract_patch_tensors(img_cor_tensor,
+                                                       event_masks)
 
                     # Predict cell patches with bloody bunny
                     cell_preds = get_bnet_predictions(patch_tens, bb, use_cuda)
@@ -262,7 +165,7 @@ def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
                     img_bg_pil.save(str(img_bg_path))
 
                     # Create json file with cell contours and labels
-                    create_json(img, polygons, cell_labels, json_path)
+                    create_json(img, unet_pred, cell_labels, json_path)
 
                     counter += 1
                     print(f"{ml_feat} --> {counter} files", end="\r",
