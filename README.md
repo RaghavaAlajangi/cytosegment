@@ -33,8 +33,7 @@ version of the label, and then we edit manually if it still does not meet the re
 ``NOTE:`` To run the data preparation pipeline, use `test.rtdc` dataset from `data` directory
 ### Step-1:
 - Take a `.rtdc` dataset that you want to include in the training data.
-  - ``NOTE:`` dataset should contain:
-  - `image_bg` and `ml_score` features (dcevent & bloody_bunny predictions)
+  - ``NOTE:`` dataset should contain `image_bg` and `ml_score` features (dcevent & ml predictions)
 - Produce `.json` files (that can be opened in labelme-GUI) with the help of bloody_bunny 
   (new model with minmax normalization) and unet model predictions. 
 - Use `rtdc_to_json.py` script to do so. 
@@ -68,21 +67,28 @@ python unet/rtdc_to_json.py --path_in "data/test.rtdc" -s 0.8 -m ml_score_r1f=10
 ```
 - The above command randomly extracts 10 `ml_score_r1f` events (images, image_bg, and json files) 
 that have `ml_score` more than 0.8 (argument `-s 0.8`) from the given `rtdc` dataset.
-- Two folders will be created namely `image_bg` and `labelme` 
+- Three folders will be created namely `image`, `image_bg` and `labelme` 
 - The extracted events (image, image_bg, and json files) are saved with names consisting of dataset name, 
 frame number, and index number as follows.
 ```bash
-# In labelme folder
+# In image folder
 {DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img.png  >>  image file
-{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img_bg.json  >>  json file
 
 # In image_bg folder
 {DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img_bg.png  >>  image_bg file
 
+# In labelme folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_interpolated.png  >>  upscaled image file
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_interpolated.json  >>  upscaled json file
+
+
+
 #Example:
 BH116_01_frm_746198_idx_179581_img.png
-BH116_01_frm_746198_idx_179581_img.json
 BH116_01_frm_746198_idx_179581_img_bg.png
+
+BH116_01_frm_746198_idx_179581_interpolated.png
+BH116_01_frm_746198_idx_179581_interpolated.json
 ```
 ### Step-2:
 See the Manual editing [guidelines](https://gitlab.gwdg.de/blood_data_analysis/blood_data_analysis/-/wikis/Analysis/MachineLearning/CellSegmentation/segmentation-labeling-guidelines) 
