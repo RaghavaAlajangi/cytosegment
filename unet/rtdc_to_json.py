@@ -16,6 +16,15 @@ from labelme_utils import create_json
 models_path = Path(__file__).parents[1] / "models"
 
 
+def save_image(image, path):
+    img_pil = Image.fromarray(image)
+    img_pil.save(str(path))
+
+
+def get_image_cor(image, image_bg):
+    return np.array(image, dtype=int) - image_bg + image_bg.mean()
+
+
 @click.command(help="This script helps to create JSON files from RTDC dataset")
 @click.option("--path_in",
               type=click.Path(exists=True,
@@ -126,8 +135,8 @@ def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
                     # Split unet prediction into individual event masks
                     event_masks = extract_event_masks(unet_pred)
 
-                    # Compute img_corr feature
-                    img_cor = np.array(img, dtype=int) - img_bg + img_bg.mean()
+                    # Compute img_cor feature
+                    img_cor = get_image_cor(img, img_bg)
 
                     # Get the transformed image_cor tensor
                     img_cor_tensor = get_transformed_image(img_cor, mean=0.5,
@@ -143,26 +152,24 @@ def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
                     # Label mapping
                     cell_labels = [id_to_class[i] for i in cell_preds]
 
-                    # Create json_path with dataset name, frameNum,
-                    # and indexNum to save lableme files
-                    json_path = path_labelme / f"{ds_name}_frm_{int(frm)}" \
-                                               f"_idx_{int(ido)}_img.png"
+                    # Create base path with dataset name, frameNum,
+                    # and indexNum to save images, image_bgs, json files
+                    base_path = f"{ds_name}_frm_{int(frm)}_idx_{int(ido)}"
+
+                    # Create json_path to save labelme files
+                    json_path = path_labelme / base_path
 
                     # Create img_path to save image
-                    img_path = path_image / f"{ds_name}_frm_{int(frm)}" \
-                                            f"_idx_{int(ido)}_img.png"
+                    img_path = path_image / (base_path + "_img.png")
 
                     # Create img_bg_path to save image_bg
-                    img_bg_path = path_image_bg / f"{ds_name}_frm_{int(frm)}" \
-                                                  f"_idx_{int(ido)}_img_bg.png"
+                    img_bg_path = path_image_bg / (base_path + "_img_bg.png")
 
                     # Save image in image directory
-                    img_pil = Image.fromarray(img)
-                    img_pil.save(str(img_path))
+                    save_image(img, img_path)
 
                     # Save image_bg in image_bg directory
-                    img_bg_pil = Image.fromarray(img_bg)
-                    img_bg_pil.save(str(img_bg_path))
+                    save_image(img_bg, img_bg_path)
 
                     # Create json file with cell contours and labels
                     create_json(img, unet_pred, cell_labels, json_path)

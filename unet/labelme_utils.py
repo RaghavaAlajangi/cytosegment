@@ -67,7 +67,7 @@ def json_to_mask(json_list, interpolate_rate=20):
     return masks
 
 
-def get_labeme_shape(xi, yi, cell_lbl):
+def create_labeme_shape(xi, yi, cell_lbl):
     shape = np.array((xi, yi)).T
     cell = {
         "label": cell_lbl,
@@ -79,7 +79,7 @@ def get_labeme_shape(xi, yi, cell_lbl):
     return cell
 
 
-def create_json(image, unet_pred, cell_labels, img_file_path,
+def create_json(image, unet_pred, cell_labels, json_path,
                 only_valid=False, correction=0.5, interpolate_rate=20):
     old_height, old_width = image.shape[:2]
 
@@ -97,8 +97,6 @@ def create_json(image, unet_pred, cell_labels, img_file_path,
     contours = find_contours(unet_pred, 0.2,
                              fully_connected="low",
                              positive_orientation="high")
-
-
 
     shapes_list = []
     for cnt, cell_lbl in zip(contours, cell_labels):
@@ -140,7 +138,7 @@ def create_json(image, unet_pred, cell_labels, img_file_path,
             if only_valid:
                 # Including all cells within the frame as valid cells
                 if np.all(new_x < (new_width - 2)) and np.all(new_x > 2):
-                    shape = get_labeme_shape(new_x, new_y, cell_lbl)
+                    shape = create_labeme_shape(new_x, new_y, cell_lbl)
                     shapes_list.append(shape)
             else:
                 # Including cells at the boundary of the frame with
@@ -149,15 +147,15 @@ def create_json(image, unet_pred, cell_labels, img_file_path,
                     new_x[new_x < 2] = 0.0
                     new_x[new_x > (new_width - 2)] = float(new_width)
                     cell_lbl = cell_lbl + "_invalid"
-                shape = get_labeme_shape(new_x, new_y, cell_lbl)
+                shape = create_labeme_shape(new_x, new_y, cell_lbl)
                 shapes_list.append(shape)
 
         # Create paths for interpolated json and image files to be saved
-        json_path = str(img_file_path).replace(".png", "_interpolated.json")
-        new_img_path = str(img_file_path).replace(".png", "_interpolated.png")
+        new_json_path = str(json_path) + "_interpolated.json"
+        new_img_path = str(json_path) + "_interpolated.png"
 
         # Save image
-        new_img_pil.save(str(new_img_path))
+        new_img_pil.save(new_img_path)
 
         # Create labelme json object
         json_dict = {"version": "5.0.1",
@@ -169,7 +167,7 @@ def create_json(image, unet_pred, cell_labels, img_file_path,
                      "imageWidth": new_width}
 
         # Save json file
-        with open(json_path, "w") as handle:
+        with open(new_json_path, "w") as handle:
             json.dump(json_dict, handle, indent=2)
 
 
