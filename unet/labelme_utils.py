@@ -67,7 +67,7 @@ def json_to_mask(json_list, interpolate_rate=20):
     return masks
 
 
-def create_labeme_shape(xi, yi, cell_lbl):
+def create_labelme_shape(xi, yi, cell_lbl):
     shape = np.array((xi, yi)).T
     cell = {
         "label": cell_lbl,
@@ -138,7 +138,7 @@ def create_json(image, unet_pred, cell_labels, json_path,
             if only_valid:
                 # Including all cells within the frame as valid cells
                 if np.all(new_x < (new_width - 2)) and np.all(new_x > 2):
-                    shape = create_labeme_shape(new_x, new_y, cell_lbl)
+                    shape = create_labelme_shape(new_x, new_y, cell_lbl)
                     shapes_list.append(shape)
             else:
                 # Including cells at the boundary of the frame with
@@ -147,7 +147,7 @@ def create_json(image, unet_pred, cell_labels, json_path,
                     new_x[new_x < 2] = 0.0
                     new_x[new_x > (new_width - 2)] = float(new_width)
                     cell_lbl = cell_lbl + "_invalid"
-                shape = create_labeme_shape(new_x, new_y, cell_lbl)
+                shape = create_labelme_shape(new_x, new_y, cell_lbl)
                 shapes_list.append(shape)
 
         # Create paths for interpolated json and image files to be saved
