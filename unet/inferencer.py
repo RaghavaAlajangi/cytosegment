@@ -51,9 +51,7 @@ def extract_patch_tensors(trans_img_corr, event_masks):
 
 
 def extract_event_masks(unet_pred):
-    thresh = threshold_otsu(unet_pred)
-    bin_pred = (unet_pred > thresh)
-    segm, num = measure.label(bin_pred, background=0, return_num=True)
+    segm, num = measure.label(unet_pred, background=0, return_num=True)
     masks = []
     for n in range(num):
         mask_n = segm == n + 1
@@ -68,12 +66,14 @@ def get_unet_prediction(image_tensor, model, use_cuda):
     # Transfer the input to the GPU
     img_tensor = img_tensor.to(device)
     # Model inference
-    pred = model(img_tensor)
+    predict = model(img_tensor)
     # Convert (1, 1, 80, 250) --> (80, 250)
-    pred = pred.squeeze(0).squeeze(0)
+    predict = predict.squeeze(0).squeeze(0)
     # Detach and bring output back to the CPU
-    pred = pred.detach().cpu().numpy()
-    return pred
+    predict = predict.detach().cpu().numpy()
+    thresh = threshold_otsu(predict)
+    bin_predict = (predict > thresh)
+    return bin_predict
 
 
 def get_bnet_predictions(patches, mnet, use_cuda):

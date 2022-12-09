@@ -67,7 +67,7 @@ python unet/rtdc_to_json.py --path_in "data/test.rtdc" -s 0.8 -m ml_score_r1f=10
 ```
 - The above command randomly extracts 10 `ml_score_r1f` events (images, image_bg, and json files) 
 that have `ml_score` more than 0.8 (argument `-s 0.8`) from the given `rtdc` dataset.
-- Three folders will be created namely `image`, `image_bg` and `labelme` 
+- Four directories will be created namely `image`, `image_bg`, `unet_predicts` and `labelme` 
 - The extracted events (image, image_bg, and json files) are saved with names consisting of dataset name, 
 frame number, and index number as follows.
 ```bash
@@ -76,6 +76,9 @@ frame number, and index number as follows.
 
 # In image_bg folder
 {DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img_bg.png  >>  image_bg file
+
+# In image_bg folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_pred.bmp  >>  unet prediction (binary mask)
 
 # In labelme folder
 {DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_interpolated.png  >>  upscaled image file
@@ -115,6 +118,11 @@ python unet/json_to_hdf5.py --path_in "data/data_labelme" --path_out "data/data_
 
 `NOTE:`Creating `.hdf5` from `.json` files is optional because we can train 
 a model either `.hdf5` file or `.json` files.
+
+### The complete pipeline somthing looks like the below picture:
+
+![data preparation pipeline](docs/data_prep_pipeline.png)
+
 
 
 # Model training
@@ -487,3 +495,4 @@ If the user doesn't provide `checkpoint` through CLI (-ks), Default model checkp
 that is stored in `dcevent/dc_segment/segm_ml_unet/checkpoints` (git-lfs file) folder is used.
 
 ## On HPC:
+TODO

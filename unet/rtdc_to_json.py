@@ -102,13 +102,15 @@ def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
     for ml_feat, num_samples in ml_feat_kv.items():
         if ml_feat in rtdc_ds.features:
             # Create directories to save labelme, image, and image_bg files
-            path_labelme = path_out / ml_feat / "labelme"
-            path_image = path_out / ml_feat / "image"
-            path_image_bg = path_out / ml_feat / "image_bg"
+            labelme_dir = path_out / ml_feat / "labelme"
+            image_dir = path_out / ml_feat / "image"
+            image_bg_dir = path_out / ml_feat / "image_bg"
+            unet_pred_dir = path_out / ml_feat / "unet_predicts"
 
-            path_labelme.mkdir(parents=True, exist_ok=True)
-            path_image.mkdir(parents=True, exist_ok=True)
-            path_image_bg.mkdir(parents=True, exist_ok=True)
+            labelme_dir.mkdir(parents=True, exist_ok=True)
+            image_dir.mkdir(parents=True, exist_ok=True)
+            image_bg_dir.mkdir(parents=True, exist_ok=True)
+            unet_pred_dir.mkdir(parents=True, exist_ok=True)
 
             ml_score = np.array(rtdc_ds[ml_feat])
             # Get the indices of the events that have minimum probability
@@ -157,19 +159,25 @@ def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
                     base_path = f"{ds_name}_frm_{int(frm)}_idx_{int(ido)}"
 
                     # Create json_path to save labelme files
-                    json_path = path_labelme / base_path
+                    json_path = labelme_dir / base_path
 
                     # Create img_path to save image
-                    img_path = path_image / (base_path + "_img.png")
+                    img_path = image_dir / (base_path + "_img.png")
 
                     # Create img_bg_path to save image_bg
-                    img_bg_path = path_image_bg / (base_path + "_img_bg.png")
+                    img_bg_path = image_bg_dir / (base_path + "_img_bg.png")
+
+                    # Create unet_predict_path to save unet predictions
+                    unet_pred_path = unet_pred_dir / (base_path + "_pred.bmp")
 
                     # Save image in image directory
                     save_image(img, img_path)
 
                     # Save image_bg in image_bg directory
                     save_image(img_bg, img_bg_path)
+
+                    # Save unet_predict in unet_pred_dir directory
+                    save_image(unet_pred, unet_pred_path)
 
                     # Create json file with cell contours and labels
                     create_json(img, unet_pred, cell_labels, json_path)

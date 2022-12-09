@@ -152,6 +152,7 @@ class SetTrainer:
         plt.title("Accuracy plot")
         plt.xlabel("Epochs")
         plt.ylabel("Accuracy")
+        plt.ylim(0.6, 1.0)
         plt.grid()
         plt.subplot(122)
         plt.plot(epoch, train_loss, color="red", label="Train loss")
@@ -162,9 +163,10 @@ class SetTrainer:
         plt.title("Loss plot")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
+        plt.ylim(0.0, 0.5)
         plt.grid()
         plt.savefig(self.nowtime_path / "train_plot.png")
-        plt.show()
+        # plt.show()
 
     def print_train_logs(self, epoch_log):
         epoch, dynamic_lr, train_loss, train_acc, val_loss, val_acc = epoch_log
