@@ -5,7 +5,7 @@ import click
 import h5py
 import numpy as np
 
-from labelme_utils import json_to_mask
+from .labelme_utils import json_to_mask
 
 
 def create_hdf5(images, image_bgs, masks, filename="segment_dataset.hdf5"):

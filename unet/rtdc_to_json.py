@@ -6,12 +6,12 @@ import click
 import dclab
 import numpy as np
 
-from inferencer import load_model
-from inferencer import get_bnet_predictions, get_unet_prediction
-from inferencer import get_transformed_image
-from inferencer import extract_event_masks, extract_patch_tensors
-from labelMap import id_to_class
-from labelme_utils import create_json
+from .inferencer import load_model
+from .inferencer import get_bnet_predictions, get_unet_prediction
+from .inferencer import get_transformed_image
+from .inferencer import extract_event_masks, extract_patch_tensors
+from .labelMap import id_to_class
+from .labelme_utils import create_json
 
 models_path = Path(__file__).parents[1] / "models"
 
@@ -65,8 +65,8 @@ def get_image_cor(image, image_bg):
                    "(by default 50 samples from each type)")
 @click.option("--use_cuda", "-c", is_flag=True,
               help="Specify whether cuda device available or not")
-def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
-         unet_ckp_path=None, use_cuda=False):
+def extract(path_in, path_out, min_score=0.5, ml_feat_kv=None,
+            bb_ckp_path=None, unet_ckp_path=None, use_cuda=False):
     # Get the default model checkpoints
     if bb_ckp_path is None:
         bb_ckp_path = models_path / "new_mnet_minmax.pth"
@@ -196,4 +196,4 @@ def main(path_in, path_out, min_score, ml_feat_kv=None, bb_ckp_path=None,
 
 
 if __name__ == "__main__":
-    main()
+    extract()

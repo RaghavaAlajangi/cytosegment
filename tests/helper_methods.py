@@ -1,9 +1,8 @@
 import pathlib
+import tempfile
+import zipfile
 
 import torch
-
-
-# import yaml
 
 
 def get_data_dir():
@@ -23,3 +22,32 @@ def get_test_tensors():
     predict = predict.view(3, 1, 3, 3)
     target = target.view(3, 1, 3, 3)
     return predict, target
+
+
+def find_data(path):
+    """Find.rtdc data files in a directory"""
+    path = pathlib.Path(path)
+    rtdcfiles = [r for r in path.rglob("*.rtdc") if r.is_file()]
+    files = [pathlib.Path(ff) for ff in rtdcfiles]
+    return files
+
+
+def retrieve_data(zip_file):
+    """Extract contents of data zip file and return data files
+    """
+    zpath = pathlib.Path(__file__).resolve().parent / "data" / zip_file
+    # unpack
+    arc = zipfile.ZipFile(str(zpath))
+
+    # extract all files to a temporary directory
+    edest = tempfile.mkdtemp(prefix=zpath.name)
+    arc.extractall(edest)
+
+    # Load RT-DC dataset
+    # find tdms files
+    datafiles = find_data(edest)
+
+    if len(datafiles) == 1:
+        datafiles = datafiles[0]
+
+    return datafiles
