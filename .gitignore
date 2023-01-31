@@ -17,3 +17,6 @@ __pycache__
 unet.egg-info
 
 test_init.py
+
+unet.egg-info
+.env
