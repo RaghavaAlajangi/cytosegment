@@ -5,6 +5,7 @@ venv/
 TEST_DATA/
 experiments/
 data/data_labelme
+htmlcov
 
 
 # Byte-compiled / optimized / DLL files
@@ -17,3 +18,4 @@ __pycache__
 unet.egg-info
 
 .env
+.coverage
