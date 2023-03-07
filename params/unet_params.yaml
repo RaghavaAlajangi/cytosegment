@@ -3,6 +3,11 @@ model:
   in_channels: 1
   out_classes: 1
   bilinear: False
+  depth: 4
+  filters: 5
+  dilation: 2
+  dropout: False
+  up_mode: 'upconv'
 
 dataset:
   type: "HDF5"

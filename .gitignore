@@ -5,7 +5,9 @@ venv/
 TEST_DATA/
 experiments/
 data/data_labelme
+test_bash
 htmlcov
+test.py
 
 
 # Byte-compiled / optimized / DLL files
@@ -19,3 +21,7 @@ unet.egg-info
 
 .env
 .coverage
+
+tests/data
+unet/hdf5_to_rtdc.py
+tests/test_cli.py
