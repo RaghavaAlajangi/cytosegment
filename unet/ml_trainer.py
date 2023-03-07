@@ -50,11 +50,15 @@ class SetTrainer:
             self.criterion = criterion.cuda()
             # self.model = DataParallel(model)
 
+        trainable_params = sum(
+            p.numel() for p in self.model.parameters() if p.requires_grad)
+        print("Trainable parameters in the model:", trainable_params)
+
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
 
         # Create a folder to store experiment results
-        nowtime = datetime.datetime.now().strftime('%d_%b_%Y_%H%M%S')
+        nowtime = datetime.datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
         self.nowtime_path = self.path_out / nowtime
         self.nowtime_path.mkdir(parents=True, exist_ok=True)
 
