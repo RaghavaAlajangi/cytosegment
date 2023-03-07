@@ -38,22 +38,35 @@ def test_unet_tunable_model():
                              dilation=2, dropout=True,
                              up_mode='upsample')
 
+    unet_tune3 = UNetTunable(in_channels=in_channels,
+                             out_classes=out_classes,
+                             depth=4, filters=3,
+                             dilation=2, dropout=True,
+                             up_mode='upsample',
+                             with_attn=True)
+
     in_tensor_1 = torch.FloatTensor(2, 1, 80, 250)
     in_tensor_2 = torch.FloatTensor(4, 1, 100, 100)
     in_tensor_3 = torch.FloatTensor(6, 1, 264, 264)
 
     out_tensor_1 = unet_tune1(in_tensor_1)
     out_tensor_11 = unet_tune2(in_tensor_1)
+    out_tensor_111 = unet_tune3(in_tensor_1)
 
     out_tensor_2 = unet_tune1(in_tensor_2)
-    out_tensor_22= unet_tune2(in_tensor_2)
+    out_tensor_22 = unet_tune2(in_tensor_2)
+    out_tensor_222 = unet_tune3(in_tensor_2)
 
     out_tensor_3 = unet_tune1(in_tensor_3)
     out_tensor_33 = unet_tune2(in_tensor_3)
+    out_tensor_333 = unet_tune3(in_tensor_3)
 
     assert out_tensor_1.shape == (2, 1, 80, 250)
     assert out_tensor_11.shape == (2, 1, 80, 250)
+    assert out_tensor_111.shape == (2, 1, 80, 250)
     assert out_tensor_2.shape == (4, 1, 100, 100)
     assert out_tensor_22.shape == (4, 1, 100, 100)
+    assert out_tensor_222.shape == (4, 1, 100, 100)
     assert out_tensor_3.shape == (6, 1, 264, 264)
     assert out_tensor_33.shape == (6, 1, 264, 264)
+    assert out_tensor_333.shape == (6, 1, 264, 264)
