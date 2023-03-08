@@ -2,6 +2,8 @@ from pathlib import Path
 
 import albumentations as A
 import h5py
+import numpy as np
+from PIL import Image
 import torch
 from torch import from_numpy
 from torch.utils.data import Dataset, DataLoader, random_split
@@ -29,16 +31,65 @@ def get_dataloaders_with_params(params):
     num_workers = dataset_params.get("num_workers")
     num_samples = dataset_params.get("num_samples")
 
+    print(data_path)
+
     if data_type.lower() == "json":
         unet_dataset = UNetDataset.from_json_files(data_path, augmentation,
                                                    mean, std, num_samples)
-    else:
+    elif data_type.lower() == "hdf5":
         unet_dataset = UNetDataset.from_hdf5_data(data_path, augmentation,
+                                                  mean, std, num_samples)
+    else:
+        unet_dataset = UNetDataset.from_png_files(data_path, augmentation,
                                                   mean, std, num_samples)
 
     data_dict = split_dataset(unet_dataset, valid_size)
     dataloader_dict = create_dataloaders(data_dict, batch_size, num_workers)
     return dataloader_dict
+
+
+def split_dataset(dataset_object, valid_size=0.2):
+    len_dataset = dataset_object.__len__()
+    valid_data_size = int(valid_size * len_dataset)
+    train_data_size = int(len_dataset - valid_data_size)
+    # Split the data into train and valid datasets randomly
+    train_data, valid_data = random_split(dataset_object,
+                                          [train_data_size, valid_data_size])
+    data = {"train": train_data, "valid": valid_data}
+    return data
+
+
+def create_dataloaders(data_dict, batch_size, num_workers=0):
+    dataloader_dict = dict()
+    for m in data_dict.keys():
+        dataloader_dict[m] = DataLoader(data_dict[m],
+                                        batch_size=batch_size,
+                                        num_workers=num_workers,
+                                        shuffle=True)
+    return dataloader_dict
+
+
+def compute_mean_std(data_path, data_type="png"):
+    if data_type.lower() == "json":
+        dataset = UNetDataset.from_json_files(data_path)
+    elif data_type.lower() == "hdf5":
+        dataset = UNetDataset.from_hdf5_data(data_path)
+    else:
+        dataset = UNetDataset.from_png_files(data_path)
+
+    data_loader = DataLoader(dataset, batch_size=32)
+
+    channel_sum, channel_square_sum, batch_counter = 0, 0, 0
+
+    for imgs, _ in data_loader:
+        channel_sum += torch.mean(imgs, dim=[0, 2, 3])
+        channel_square_sum += torch.mean(imgs ** 2, dim=[0, 2, 3])
+
+        batch_counter += 1
+
+    mean = float(channel_sum / batch_counter)
+    std = float((channel_square_sum / batch_counter - mean ** 2) ** 0.5)
+    return mean, std
 
 
 class UNetDataset(Dataset):
@@ -66,6 +117,28 @@ class UNetDataset(Dataset):
         json_list = [p for p in Path(json_path).rglob("*.json") if p.is_file()]
         images, masks = json_to_mask(json_list)
 
+        len_images = len(images)
+        num_samples = num_samples if num_samples else len_images
+        images = images[:num_samples]
+        masks = masks[:num_samples]
+        return cls(images, masks, augment, mean, std)
+
+    @classmethod
+    def from_png_files(cls, data_path, augment=False, mean=None,
+                       std=None, num_samples=None):
+        img_path = Path(data_path) / "images"
+        msk_path = Path(data_path) / "masks"
+
+        # Get the list of all the ".png" files
+        img_list = [p for p in Path(img_path).rglob("*.png") if p.is_file()]
+        msk_list = [p for p in Path(msk_path).rglob("*.png") if p.is_file()]
+
+        # Read images and masks
+        images = [np.array(Image.open(i)) for i in img_list]
+        masks = [np.array(Image.open(i)) for i in msk_list]
+
+        # Test the model with desired number of samples by passing
+        # "num_samples" argument
         len_images = len(images)
         num_samples = num_samples if num_samples else len_images
         images = images[:num_samples]
@@ -101,40 +174,3 @@ class UNetDataset(Dataset):
         # Add an extra channel [H, W] --> [1, H, W]
         img_tensor = img_tensor.unsqueeze(0)
         return img_tensor, mask_tensor
-
-
-def split_dataset(dataset_object, valid_size=0.2):
-    len_dataset = dataset_object.__len__()
-    valid_data_size = int(valid_size * len_dataset)
-    train_data_size = int(len_dataset - valid_data_size)
-    train_data, valid_data = random_split(dataset_object,
-                                          [train_data_size, valid_data_size])
-    data = {"train": train_data, "valid": valid_data}
-    return data
-
-
-def create_dataloaders(data_dict, batch_size, num_workers=0):
-    data_load_dict = dict()
-    for m in data_dict.keys():
-        data_load_dict[m] = DataLoader(data_dict[m],
-                                       batch_size=batch_size,
-                                       num_workers=num_workers,
-                                       shuffle=True)
-    return data_load_dict
-
-
-def compute_mean_std(hdf5_file_path):
-    dataset = UNetDataset.from_hdf5_data(hdf5_file_path)
-    data_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-    channel_sum, channel_square_sum, batch_counter = 0, 0, 0
-
-    for imgs, _ in data_loader:
-        channel_sum += torch.mean(imgs, dim=[0, 2, 3])
-        channel_square_sum += torch.mean(imgs ** 2, dim=[0, 2, 3])
-
-        batch_counter += 1
-
-    mean = float(channel_sum / batch_counter)
-    std = float((channel_square_sum / batch_counter - mean ** 2) ** 0.5)
-    return mean, std

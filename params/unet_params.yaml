@@ -8,15 +8,16 @@ model:
   dilation: 2
   dropout: False
   up_mode: 'upconv'
+  with_attn: True
 
 dataset:
-  type: "HDF5"
-  data_path: data/new_segm_dataset.hdf5
+  type: "PNG"
+  data_path: data/training_testing_set/training
   augmentation: False
   valid_size: 0.2
   batch_size: 8
-#  mean: [ 0.6735 ]
-#  std: [ 0.1342 ]
+#  mean: [0.67709]
+#  std: [0.13369]
 
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
@@ -24,14 +25,15 @@ dataset:
   # If there is a change in the dataset (either inclusion or exclusion of
   # image and mask pairs into the dataset), we need to recalculate the mean
   # and std values of the dataset.
-  mean: [ 0.6795 ]
-  std: [ 0.1417 ]
+  mean: [0.67709]
+  std: [0.13369]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
   num_workers: 0
   # 'num_samples' is useful for testing. Irrespective of the number of
-  # samples available in the dataset, It takes only a specific number
-  # of samples from the dataset to run the test pipeline.
+  # samples available in the dataset, trainer takes "num_samples" from
+  # the dataset to run the test pipeline. If you do actual training set
+  # this to "null"
   num_samples: null
 
 criterion:
@@ -59,13 +61,13 @@ scheduler:
   lr_step_size: 10
   lr_decay_rate: 0.1
 
-max_epochs: 5
-use_cuda: False
+max_epochs: 3
+use_cuda: True
 path_out: "experiments"
 
 # Trainer start saving checkpoints only after the validation
 # accuracy is higher than  'min_ckp_acc'
-min_ckp_acc: 0.90
+min_ckp_acc: 0.9
 
 # If the model metric (validation loss) starts increasing,
 # 'early stopping' will count the n consequent epochs (patience).
@@ -77,3 +79,6 @@ early_stop_patience: 10
 # Start the training where you left by providing
 # previous checkpoint (not jit) path
 init_from_ckp: null
+
+# Specify whether results should be saved with tensorboard
+tensorboard: True
