@@ -22,6 +22,6 @@ unet.egg-info
 .env
 .coverage
 
-tests/data
+tests/data/rtdc_ds_with_img_bg_ml_scores.zip
 unet/hdf5_to_rtdc.py
 tests/test_cli.py
