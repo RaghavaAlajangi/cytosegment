@@ -121,7 +121,8 @@ tensorboard: True
 ```
 
 ```bash
-python train.py --params_path "params/unet_params.yaml"
+# Train a model with parameters
+python -m unet --params_path "params/unet_params.yaml"
 ```
 
 During training, a folder (`experiments`) will be created to save the outcome of experiments. Moreover, 
