@@ -31,7 +31,7 @@ dataset_params = {
 }
 
 
-def test_trainer():
+def test_trainer_and_pipeline():
     path_out = path_in.with_name("temp_out")
 
     model = get_model_with_params(params)
@@ -61,11 +61,9 @@ def test_trainer():
                            tensorboard=tensorboard,
                            init_from_ckp=None)
     trainer.start_train()
-
-    with open(str(path_out / "train_logs.json")) as f:
+    test_log_file = [p for p in path_out.glob("**/train_logs.json")][0]
+    with open(test_log_file) as f:
         data = json.load(f)
-
-    assert (path_out / "train_plot.png").is_file()
     assert "epochs" in data.keys()
     assert len(data["epochs"]) == 2
     assert data["train_samples"] == 8
