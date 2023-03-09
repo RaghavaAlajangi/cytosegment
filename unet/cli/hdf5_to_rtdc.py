@@ -42,8 +42,7 @@ def hdf5_to_rtdc(hdf5_file_path):
         hw.store_feature("frame", frame)
 
 
-d = dclab.new_dataset(
-    r"U:\Members\Raghava\00_SemanticSegmentation\UNET_annotations\old_train_data.rtdc")
+d = dclab.new_dataset("old_train_data.rtdc")
 
 print(d.features)
 
