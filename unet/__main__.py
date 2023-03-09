@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from unet.ml_trainer import SetupTrainer
+from .ml_trainer import SetupTrainer
 
 
 @click.command(help="Script to run the training")
@@ -15,7 +15,6 @@ from unet.ml_trainer import SetupTrainer
                               path_type=Path),
               help="Path to params file (.yaml)")
 def main(params_path):
-
     trainer = SetupTrainer.with_params(params_path)
 
     tik = time.time()

@@ -17,6 +17,7 @@ from .ml_metrics import get_metric_with_params
 from .ml_models import get_model_with_params
 from .ml_optimizers import get_optimizer_with_params
 from .ml_schedulers import get_scheduler_with_params
+from .utils import human_format
 
 
 class SetupTrainer:
@@ -57,8 +58,8 @@ class SetupTrainer:
         # Print and save No of model parameters in the result logs
         trainable_params = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad)
-        print("Trainable parameters in the model:", trainable_params)
-        self.model_params = trainable_params
+        self.model_params = human_format(trainable_params)
+        print("Trainable parameters in the model:", self.model_params)
 
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
