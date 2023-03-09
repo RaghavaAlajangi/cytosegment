@@ -1,5 +1,5 @@
 model:
-  type: "UNet"
+  type: "UNetTunable"
   in_channels: 1
   out_classes: 1
   bilinear: False

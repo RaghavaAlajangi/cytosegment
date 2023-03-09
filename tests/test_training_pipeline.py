@@ -12,14 +12,14 @@ from unet.ml_schedulers import get_scheduler_with_params
 from unet.ml_trainer import SetupTrainer
 from .helper_methods import retrieve_train_data_path
 
-path_in = retrieve_train_data_path("test_dataset.zip")
+path_in = retrieve_train_data_path("test_dataset.zip") / "dataset"
 params_path = Path(__file__).parent / "data" / "test_params.yaml"
 params = yaml.safe_load(open(params_path))
 
 dataset_params = {
     "dataset": {
         "type": "PNG",
-        "data_path": path_in / "dataset",
+        "data_path": path_in,
         "augmentation": False,
         "valid_size": 0.2,
         "batch_size": 4,
@@ -70,6 +70,3 @@ def test_trainer():
     assert len(data["epochs"]) == 2
     assert data["train_samples"] == 8
     assert data["valid_samples"] == 2
-
-
-
