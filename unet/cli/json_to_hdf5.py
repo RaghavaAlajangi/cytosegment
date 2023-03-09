@@ -5,7 +5,7 @@ import click
 import h5py
 import numpy as np
 
-from .labelme_utils import json_to_mask
+from labelme_utils import json_to_mask
 
 
 def create_hdf5(images, image_bgs, masks, filename="segment_dataset.hdf5"):
@@ -43,24 +43,24 @@ def create_hdf5(images, image_bgs, masks, filename="segment_dataset.hdf5"):
         mset.attrs.create("INTERLACE_MODE", "INTERLACE_PIXEL", dtype="S16")
 
 
+def get_file_list(path_in, filetype):
+    file_list = [p for p in Path(path_in).rglob(filetype) if p.is_file()]
+    return sorted(file_list)
+
+
 def get_sorted_files(path_in):
     valid_json_files = []
     valid_img_files = []
     valid_img_bg_files = []
 
     # Get the interpolated json files from the path_in directory
-    json_files = [p for p in Path(path_in).rglob("*interpolated.json") if
-                  p.is_file()]
-    sorted_json_files = sorted(json_files)
+    sorted_json_files = get_file_list(path_in, filetype="*interpolated.json")
 
     # Get the image files from the path_in directory
-    img_files = [p for p in Path(path_in).rglob("*img.png") if p.is_file()]
-    sorted_img_files = sorted(img_files)
+    sorted_img_files = get_file_list(path_in, filetype="*img.png")
 
     # Get the image_bg files from the path_in directory
-    img_bg_files = [p for p in Path(path_in).rglob("*img_bg.png") if
-                    p.is_file()]
-    sorted_img_bg_files = sorted(img_bg_files)
+    sorted_img_bg_files = get_file_list(path_in, filetype="*img_bg.png")
 
     # Create a list of image stem names
     img_stems = [str(f.name).split('img.png')[0] for f in sorted_img_files]
@@ -70,7 +70,7 @@ def get_sorted_files(path_in):
                     sorted_img_bg_files]
 
     for json_file in sorted_json_files:
-        json_stem = str(json_file.name).split('img_interpolated')[0]
+        json_stem = str(json_file.name).split('interpolated')[0]
         if json_stem in img_stems and json_stem in img_bg_stems:
             # Get the indices for similar file names as json file
             img_idx = img_stems.index(json_stem)

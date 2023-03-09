@@ -2,19 +2,20 @@ model:
   type: "UNetTunable"
   in_channels: 1
   out_classes: 1
-  depth: 4
-  filters: 5
-  dilation: 2
+  bilinear: False
+  depth: 2
+  filters: 2
+  dilation: 1
   dropout: False
   up_mode: 'upconv'
-  with_attn: True
+  with_attn: False
 
 dataset:
   type: "PNG"
-  data_path: data/training_testing_set/training
+  data_path: ./tests/data/dataset
   augmentation: False
-  valid_size: 0.2
-  batch_size: 8
+  valid_size: 0.1
+  batch_size: 2
 #  mean: [0.67709]
 #  std: [0.13369]
 
@@ -30,10 +31,9 @@ dataset:
   # will be loaded in the main process.
   num_workers: 0
   # 'num_samples' is useful for testing. Irrespective of the number of
-  # samples available in the dataset, trainer takes "num_samples" from
-  # the dataset to run the test pipeline. If you do actual training set
-  # this to "null"
-  num_samples: 50
+  # samples available in the dataset, It takes only a specific number
+  # of samples from the dataset to run the test pipeline.
+  num_samples: 6
 
 criterion:
   type: "FocalTverskyLoss"
@@ -60,13 +60,13 @@ scheduler:
   lr_step_size: 10
   lr_decay_rate: 0.1
 
-max_epochs: 3
+max_epochs: 2
 use_cuda: False
 path_out: "experiments"
 
 # Trainer start saving checkpoints only after the validation
 # accuracy is higher than  'min_ckp_acc'
-min_ckp_acc: 0.9
+min_ckp_acc: 0.60
 
 # If the model metric (validation loss) starts increasing,
 # 'early stopping' will count the n consequent epochs (patience).
@@ -80,4 +80,4 @@ early_stop_patience: 10
 init_from_ckp: null
 
 # Specify whether results should be saved with tensorboard
-tensorboard: True
+tensorboard: False

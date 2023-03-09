@@ -6,14 +6,13 @@ import click
 import dclab
 import numpy as np
 
-from .inferencer import load_model
-from .inferencer import get_bnet_predictions, get_unet_prediction
-from .inferencer import get_transformed_image
-from .inferencer import extract_event_masks, extract_patch_tensors
-from .labelMap import id_to_class
-from .labelme_utils import create_json
+from cli_inference import (load_model, get_bnet_predictions,
+                           get_unet_prediction, get_transformed_image,
+                           extract_event_masks, extract_patch_tensors)
+from labelMap import id_to_class
+from labelme_utils import create_json
 
-models_path = Path(__file__).parents[1] / "models"
+models_path = Path(__file__).parents[2] / "models"
 
 
 def save_image(image, path):
