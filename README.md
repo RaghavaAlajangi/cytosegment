@@ -23,105 +23,6 @@ cd SemanticSegmentor
 pip install -e .
 ```
 
-## Data perparation
-
-We are using a semi-automated labeling process to create a dataset for UNet training 
-which means, instead of creating segmented labels from scratch, we use classification 
-and segmentation models that are being trained before as estimates to generate the initial 
-version of the label, and then we edit manually if it still does not meet the requirements.
-
-``NOTE:`` To run the data preparation pipeline, use `test.rtdc` dataset from `data` directory
-### Step-1:
-- Take a `.rtdc` dataset that you want to include in the training data.
-  - ``NOTE:`` dataset should contain `image_bg` and `ml_score` features (dcevent & ml predictions)
-- Produce `.json` files (that can be opened in labelme-GUI) with the help of bloody_bunny 
-  (new model with minmax normalization) and unet model predictions. 
-- Use `rtdc_to_json.py` script to do so. 
-- To see the options:
-
-```bash
-python unet/rtdc_to_json.py --help
-```
-```bash
-Options:
-  --path_in FILE         Path to RTDC dataset (.rtdc)
-  --path_out PATH        Path to save output files (images, JSON files). If it
-                         is not given, script creates new folder based on
-                         `path_in`
-  --bb_ckp_path FILE     Path to bloody_bunny model checkpoint. If it is not
-                         given default checkpoint is taken from model folder
-  --unet_ckp_path FILE   Path to unet model checkpoint. If it is not given
-                         default checkpoint is taken from model folder
-  -s, --min_score FLOAT  Specify minimum probability of `ml_score` feature
-  -m, --ml_feat_kv TEXT  KEY=VALUE argument for cell_type and num_samples
-                         pairthat needs to be extracted from RTDC dataset.i.e
-                         `ml_score_r1f=10` If it is not given,
-                         `ml_score`features in dataset are used to generate
-                         labelme samples(by default 50 samples from each type)
-  -c, --is_cuda          Specify whether cuda device available or not
-  --help                 Show this message and exit.
-```
-- Use the test dataset that is stored (`git lfs`) in data folder
-```bash
-python unet/rtdc_to_json.py --path_in "data/test.rtdc" -s 0.8 -m ml_score_r1f=10 -c
-```
-- The above command randomly extracts 10 `ml_score_r1f` events (images, image_bg, and json files) 
-that have `ml_score` more than 0.8 (argument `-s 0.8`) from the given `rtdc` dataset.
-- Four directories will be created namely `image`, `image_bg`, `unet_predicts` and `labelme` 
-- The extracted events (image, image_bg, and json files) are saved with names consisting of dataset name, 
-frame number, and index number as follows.
-```bash
-# In image folder
-{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img.png  >>  image file
-
-# In image_bg folder
-{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img_bg.png  >>  image_bg file
-
-# In image_bg folder
-{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_pred.bmp  >>  unet prediction (binary mask)
-
-# In labelme folder
-{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_interpolated.png  >>  upscaled image file
-{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_interpolated.json  >>  upscaled json file
-
-
-
-#Example:
-BH116_01_frm_746198_idx_179581_img.png
-BH116_01_frm_746198_idx_179581_img_bg.png
-
-BH116_01_frm_746198_idx_179581_interpolated.png
-BH116_01_frm_746198_idx_179581_interpolated.json
-```
-### Step-2:
-See the Manual editing [guidelines](https://gitlab.gwdg.de/blood_data_analysis/blood_data_analysis/-/wikis/Analysis/MachineLearning/CellSegmentation/segmentation-labeling-guidelines) 
-
-
-### Step-3:
-
-Convert `.json` files into `.hdf5` file that contains images and binary mask. 
-Use `json_to_hdf5.py` script to do so.
-
-```bash
-python unet/json_to_hdf5.py --help
-```
-```bash
-Options:
-  --path_in PATH   Path to .json files folder
-  --path_out FILE  Optional. Path to save output (.hdf5) file
-  --help           Show this message and exit.
-```
-- To use:
-```bash
-python unet/json_to_hdf5.py --path_in "data/data_labelme" --path_out "data/data_labelme/test.hdf5"
-```
-
-`NOTE:`Creating `.hdf5` from `.json` files is optional because we can train 
-a model either `.hdf5` file or `.json` files.
-
-### The complete pipeline somthing looks like the below picture:
-
-![data preparation pipeline](docs/data_prep_pipeline.png)
 
 
 
@@ -140,29 +41,36 @@ model:
   in_channels: 1
   out_classes: 1
   bilinear: False
+  depth: 4
+  filters: 5
+  dilation: 2
+  dropout: False
+  up_mode: 'upconv'
+  with_attn: True
 
 dataset:
-  type: "HDF5"
-  data_path: data/new_segm_dataset.hdf5
+  type: "PNG"
+  data_path: data/training_testing_set/training
   augmentation: False
   valid_size: 0.2
   batch_size: 8
-#  mean: [ 0.6735 ]
-#  std: [ 0.1342 ]
-
+  
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
   # script. The computed values can be used during the model inference.
   # If there is a change in the dataset (either inclusion or exclusion of
   # image and mask pairs into the dataset), we need to recalculate the mean
   # and std values of the dataset.
-  mean: [ 0.6795 ]
-  std: [ 0.1417 ]
+  mean: [0.67709]
+  std: [0.13369]
+  # how many subprocesses to use for data loading. 0 means that the data
+  # will be loaded in the main process.
   num_workers: 0
   # 'num_samples' is useful for testing. Irrespective of the number of
-  # samples available in the dataset, It takes only a specific number
-  # of samples from the dataset to run the test pipeline.
-  num_samples: 50
+  # samples available in the dataset, trainer takes "num_samples" from
+  # the dataset to run the test pipeline. If you do actual training set
+  # this to "null"
+  num_samples: null
 
 criterion:
   type: "FocalTverskyLoss"
@@ -189,13 +97,13 @@ scheduler:
   lr_step_size: 10
   lr_decay_rate: 0.1
 
-max_epochs: 5
-use_cuda: False
+max_epochs: 3
+use_cuda: True
 path_out: "experiments"
 
 # Trainer start saving checkpoints only after the validation
 # accuracy is higher than  'min_ckp_acc'
-min_ckp_acc: 0.90
+min_ckp_acc: 0.9
 
 # If the model metric (validation loss) starts increasing,
 # 'early stopping' will count the n consequent epochs (patience).
@@ -207,6 +115,9 @@ early_stop_patience: 10
 # Start the training where you left by providing
 # previous checkpoint (not jit) path
 init_from_ckp: null
+
+# Specify whether results should be saved with tensorboard
+tensorboard: True
 ```
 
 ```bash
@@ -218,7 +129,7 @@ sub-folders will be created based on date and time of the experiment, and model 
 (at different validation accuracies), train logs, and plots will be saved there. Checkpoint path 
 consists of epoch number and validation accuracy like example below.
 ```bash
-E28_validAcc_9081_jit.ckp  >>>  E{checkpoint number}_validAcc_{validation accuracy}_{type of model}.ckp
+E24_trainAcc_9304_validAcc_9083_jit.ckp  >>>  E{checkpoint number}_trainAcc_{training accuracy}_validAcc_{validation accuracy}_{type of model}.ckp
 ```
 
 ## Without params file (optional):
@@ -241,7 +152,11 @@ AUGMENT = False
 MEAN = [0.6795]
 STD = [0.1417]
 
+data_path = "data/training_dataset/"  # it should consists of images and masks folders
 json_path = r"C:\Raghava_local\BENCHMARK_DATA\test"
+
+# With png images and masks
+unet_dataset = UNetDataset.from_png_files(data_path, AUGMENT, MEAN, STD)
 
 # With json_files_path
 unet_dataset = UNetDataset.from_json_files(json_path, AUGMENT, MEAN, STD)
@@ -280,7 +195,7 @@ dataloaders = get_dataloaders_with_params(params)
 
 ### Create a model object:
 ```bash
-from unet.ml_models import UNet, get_model_with_params
+from unet.ml_models import UNet, UNetTunable, get_model_with_params
 
 # With params file
 unet_model = get_model_with_params(params)
@@ -354,10 +269,10 @@ scheduler = lr_scheduler.StepLR(optimizer=optimizer,
 
 ### Create a trainer object:
 ```bash
-from unet.ml_trainer import SetTrainer
+from unet.ml_trainer import SetupTrainer
 
 # With params file
-trainer = SetTrainer.with_params(params)
+trainer = SetupTrainer.with_params(params)
 
 # Without params file
 
@@ -377,21 +292,23 @@ EARLY_STOP_PATIENCE = 10
 
 PATH_OUT = "experiments"
 
-trainer = SetTrainer(model=unet_model,
-                     dataloaders=dataloaders,
-                     criterion=criterion,
-                     metric=metric,
-                     optimizer=optimizer,
-                     scheduler=scheduler,
-                     max_epochs=MAX_EPOCHS,
-                     use_cuda=USE_CUDA,
-                     min_ckp_acc=MIN_CKP_ACC,
-                     early_stop_patience=EARLY_STOP_PATIENCE,
-                     path_out=PATH_OUT,
-                     init_from_ckp=None)
+
+trainer = SetupTrainer(model=unet_model,
+                       dataloaders=dataloaders,
+                       criterion=criterion,
+                       metric=metric,
+                       optimizer=optimizer,
+                       scheduler=scheduler,
+                       max_epochs=MAX_EPOCHS,
+                       use_cuda=USE_CUDA,
+                       min_ckp_acc=MIN_CKP_ACC,
+                       early_stop_patience=EARLY_STOP_PATIENCE,
+                       path_out=PATH_OUT,
+                       tensorboard=True,
+                       init_from_ckp=None)
  
  # Training
- trainer.strat_train()
+ trainer.start_train()
 ```
 
 # Model Training on HPC:
@@ -496,3 +413,107 @@ that is stored in `dcevent/dc_segment/segm_ml_unet/checkpoints` (git-lfs file) f
 
 ## On HPC:
 TODO
+
+
+
+
+
+## Data perparation (labelme) -- Not using anymore
+
+We are using a semi-automated labeling process to create a dataset for UNet training 
+which means, instead of creating segmented labels from scratch, we use classification 
+and segmentation models that are being trained before as estimates to generate the initial 
+version of the label, and then we edit manually if it still does not meet the requirements.
+
+``NOTE:`` To run the data preparation pipeline, use `test.rtdc` dataset from `data` directory
+### Step-1:
+- Take a `.rtdc` dataset that you want to include in the training data.
+  - ``NOTE:`` dataset should contain `image_bg` and `ml_score` features (dcevent & ml predictions)
+- Produce `.json` files (that can be opened in labelme-GUI) with the help of bloody_bunny 
+  (new model with minmax normalization) and unet model predictions. 
+- Use `rtdc_to_json.py` script to do so. 
+- To see the options:
+
+```bash
+python unet/cli/rtdc_to_json.py --help
+```
+```bash
+Options:
+  --path_in FILE         Path to RTDC dataset (.rtdc)
+  --path_out PATH        Path to save output files (images, JSON files). If it
+                         is not given, script creates new folder based on
+                         `path_in`
+  --bb_ckp_path FILE     Path to bloody_bunny model checkpoint. If it is not
+                         given default checkpoint is taken from model folder
+  --unet_ckp_path FILE   Path to unet model checkpoint. If it is not given
+                         default checkpoint is taken from model folder
+  -s, --min_score FLOAT  Specify minimum probability of `ml_score` feature
+  -m, --ml_feat_kv TEXT  KEY=VALUE argument for cell_type and num_samples
+                         pairthat needs to be extracted from RTDC dataset.i.e
+                         `ml_score_r1f=10` If it is not given,
+                         `ml_score`features in dataset are used to generate
+                         labelme samples(by default 50 samples from each type)
+  -c, --is_cuda          Specify whether cuda device available or not
+  --help                 Show this message and exit.
+```
+- Use the test dataset that is stored (`git lfs`) in data folder
+```bash
+python unet/cli/rtdc_to_json.py --path_in "data/test.rtdc" -s 0.8 -m ml_score_r1f=10 -c
+```
+- The above command randomly extracts 10 `ml_score_r1f` events (images, image_bg, and json files) 
+that have `ml_score` more than 0.8 (argument `-s 0.8`) from the given `rtdc` dataset.
+- Four directories will be created namely `image`, `image_bg`, `unet_predicts` and `labelme` 
+- The extracted events (image, image_bg, and json files) are saved with names consisting of dataset name, 
+frame number, and index number as follows.
+```bash
+# In image folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img.png  >>  image file
+
+# In image_bg folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_img_bg.png  >>  image_bg file
+
+# In image_bg folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_pred.bmp  >>  unet prediction (binary mask)
+
+# In labelme folder
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_interpolated.png  >>  upscaled image file
+{DATASET_NAME}_frm_{FRAME_NUMBER}_idx_{INDEX_NUMBER}_interpolated.json  >>  upscaled json file
+
+
+
+#Example:
+BH116_01_frm_746198_idx_179581_img.png
+BH116_01_frm_746198_idx_179581_img_bg.png
+
+BH116_01_frm_746198_idx_179581_interpolated.png
+BH116_01_frm_746198_idx_179581_interpolated.json
+```
+### Step-2:
+See the Manual editing [guidelines](https://gitlab.gwdg.de/blood_data_analysis/blood_data_analysis/-/wikis/Analysis/MachineLearning/CellSegmentation/segmentation-labeling-guidelines) 
+
+
+### Step-3:
+
+Convert `.json` files into `.hdf5` file that contains images and binary mask. 
+Use `json_to_hdf5.py` script to do so.
+
+```bash
+python unet/json_to_hdf5.py --help
+```
+```bash
+Options:
+  --path_in PATH   Path to .json files folder
+  --path_out FILE  Optional. Path to save output (.hdf5) file
+  --help           Show this message and exit.
+```
+- To use:
+```bash
+python unet/json_to_hdf5.py --path_in "data/data_labelme" --path_out "data/data_labelme/test.hdf5"
+```
+
+`NOTE:`Creating `.hdf5` from `.json` files is optional because we can train 
+a model either `.hdf5` file or `.json` files.
+
+### The complete pipeline somthing looks like the below picture:
+
+![data preparation pipeline](docs/data_prep_pipeline.png)

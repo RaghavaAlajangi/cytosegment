@@ -5,6 +5,7 @@ venv/
 TEST_DATA/
 experiments/
 data/data_labelme
+data/training_testing_set
 test_bash
 htmlcov
 test.py
@@ -23,5 +24,4 @@ unet.egg-info
 .coverage
 
 tests/data/rtdc_ds_with_img_bg_ml_scores.zip
-unet/hdf5_to_rtdc.py
 tests/test_cli.py
