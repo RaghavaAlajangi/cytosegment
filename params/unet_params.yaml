@@ -2,7 +2,6 @@ model:
   type: "UNetTunable"
   in_channels: 1
   out_classes: 1
-  bilinear: False
   depth: 4
   filters: 5
   dilation: 2

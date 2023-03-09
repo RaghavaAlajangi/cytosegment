@@ -64,9 +64,8 @@ class SetupTrainer:
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
 
-        if Path(path_out).is_dir():
+        if Path(path_out).is_dir() and path_out != "experiments":
             self.exp_path = Path(path_out)
-        # if path_out == "experiments":
         else:
             # Create a folder to store experiment results
             time_now = datetime.datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
