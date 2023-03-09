@@ -15,18 +15,19 @@ def get_model_with_params(params):
                     out_classes=model_params.get("out_classes"),
                     bilinear=model_params.get("bilinear"))
 
-    if model_type.lower() == "unet_tunable":
+    if model_type.lower() == "unettunable":
         assert {"in_channels", "out_classes"}.issubset(model_params)
         assert {"depth", "filters"}.issubset(model_params)
         assert {"dilation", "dropout"}.issubset(model_params)
-        assert {"up_mode"}.issubset(model_params)
+        assert {"up_mode", "with_attn"}.issubset(model_params)
         return UNetTunable(in_channels=model_params.get("in_channels"),
                            out_classes=model_params.get("out_classes"),
                            depth=model_params.get("depth"),
                            filters=model_params.get("filters"),
                            dilation=model_params.get("dilation"),
                            dropout=model_params.get("dropout"),
-                           up_mode=model_params.get("up_mode"))
+                           up_mode=model_params.get("up_mode"),
+                           with_attn=model_params.get("with_attn"))
 
 
 class DoubleConv(nn.Module):

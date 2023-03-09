@@ -1,5 +1,5 @@
 model:
-  type: "UNet"
+  type: "UNetTunable"
   in_channels: 1
   out_classes: 1
   bilinear: False
@@ -34,7 +34,7 @@ dataset:
   # samples available in the dataset, trainer takes "num_samples" from
   # the dataset to run the test pipeline. If you do actual training set
   # this to "null"
-  num_samples: null
+  num_samples: 50
 
 criterion:
   type: "FocalTverskyLoss"
@@ -62,7 +62,7 @@ scheduler:
   lr_decay_rate: 0.1
 
 max_epochs: 3
-use_cuda: True
+use_cuda: False
 path_out: "experiments"
 
 # Trainer start saving checkpoints only after the validation

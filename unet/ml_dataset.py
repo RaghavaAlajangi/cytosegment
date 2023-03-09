@@ -8,7 +8,7 @@ import torch
 from torch import from_numpy
 from torch.utils.data import Dataset, DataLoader, random_split
 
-from .labelme_utils import json_to_mask
+from .cli.labelme_utils import json_to_mask
 
 
 def get_dataloaders_with_params(params):
@@ -30,8 +30,6 @@ def get_dataloaders_with_params(params):
     std = dataset_params.get("std")
     num_workers = dataset_params.get("num_workers")
     num_samples = dataset_params.get("num_samples")
-
-    print(data_path)
 
     if data_type.lower() == "json":
         unet_dataset = UNetDataset.from_json_files(data_path, augmentation,
