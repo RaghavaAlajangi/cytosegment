@@ -5,7 +5,7 @@
 # Initial working directory:
 #SBATCH -D ./
 # Job Name:
-#SBATCH -J <JOB NAME>
+#SBATCH -J Tunable_UNet
 # Queue:
 #SBATCH --partition=gpu     # If using both GPUs of a node
 # Node feature:
@@ -18,7 +18,7 @@
 #SBATCH --cpus-per-task=36
 #SBATCH --mem=100GB
 #SBATCH --mail-type=all
-#SBATCH --mail-user=<EMAIL ADDRESS>
+#SBATCH --mail-user=raghava.alajangi@mpl.mpg.de
 #
 # wall clock limit
 #SBATCH --time=24:00:00
