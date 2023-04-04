@@ -7,6 +7,7 @@ def get_scheduler_with_params(params, optimizer):
     assert {"type", "lr_decay_rate"}.issubset(scheduler_params)
     scheduler_type = scheduler_params.get("type")
     lr_decay_rate = scheduler_params.get("lr_decay_rate")
+    patience = scheduler_params.get("patience")
 
     if scheduler_type.lower() == "steplr":
         assert {"lr_step_size"}.issubset(scheduler_params)
@@ -16,8 +17,7 @@ def get_scheduler_with_params(params, optimizer):
                                    gamma=lr_decay_rate)
 
     if scheduler_type.lower() == "reducelronplateau":
-        assert {"mode"}.issubset(scheduler_params)
-        mode = scheduler_params.get("mode")
         return lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
-                                              mode=mode,
+                                              mode="max",
+                                              patience=patience,
                                               factor=lr_decay_rate)
