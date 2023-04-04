@@ -16,7 +16,7 @@ def get_metric_with_params(params):
 
 
 class DiceCoeff(nn.Module):
-    def __init__(self, smooth=1):
+    def __init__(self, smooth=1e-6):
         super(DiceCoeff, self).__init__()
         self.smooth = smooth
 
@@ -44,8 +44,10 @@ class IoUCoeff(nn.Module):
         # a sigmoid or equivalent activation layer
         predicts = torch.sigmoid(predicts)
         # Squeeze channel dim - (BATCH x 1 x H x W) --> (BATCH x H x W)
-        predicts = predicts.squeeze(1)
-        targets = targets.squeeze(1)
+        if len(predicts.shape) == 4:
+            predicts = predicts.squeeze(1)
+        if len(targets.shape) == 4:
+            targets = targets.squeeze(1)
         # Make sure predictions and targets are binarized
         predicts = predicts > self.thresh
         targets = targets > self.thresh
@@ -58,3 +60,35 @@ class IoUCoeff(nn.Module):
         # This is equal to comparing with thresholds
         iou_score = torch.clamp(20 * (iou - 0.5), 0, 10).ceil() / 10
         return iou_score.detach().cpu().numpy()
+
+
+class PixelHit(nn.Module):
+    def __init__(self, smooth=1e-6, thresh=0.45):
+        super(PixelHit, self).__init__()
+        self.smooth = smooth
+        self.thresh = thresh
+
+    def forward(self, predicts, targets):
+        # Apply activation. comment out if your model contains
+        # a sigmoid or equivalent activation layer
+        predicts = torch.sigmoid(predicts)
+        # Squeeze channel dim - (BATCH x 1 x H x W) --> (BATCH x H x W)
+        if len(predicts.shape) == 4:
+            predicts = predicts.squeeze(1)
+        if len(targets.shape) == 4:
+            targets = targets.squeeze(1)
+        # Make sure predictions and targets are binarized
+        predicts = predicts > self.thresh
+        targets = targets > self.thresh
+
+        pixel_diff = torch.logical_xor(targets, predicts).type(torch.int)
+        # pixel_diff[pixel_diff == -1] =
+
+        hit_px_list = []
+        for m, d in zip(targets, pixel_diff):
+            white_px_tar = len(torch.where(m == 1)[0])
+            white_px_diff = len(torch.where(d == 1)[0])
+            hit_pixel = (white_px_tar - white_px_diff)
+            hit_pixel_ratio = hit_pixel / white_px_tar
+            hit_px_list.append(hit_pixel_ratio)
+        return hit_px_list
