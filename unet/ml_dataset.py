@@ -4,8 +4,9 @@ import albumentations as A
 import h5py
 import numpy as np
 from PIL import Image
-import torch
+from torch import mean as tmean
 from torch import from_numpy
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split
 
 from .cli.labelme_utils import json_to_mask
@@ -57,13 +58,13 @@ def split_dataset(dataset_object, valid_size=0.2):
     return data
 
 
-def create_dataloaders(data_dict, batch_size, num_workers=0):
+def create_dataloaders(data_dict, batch_size, num_workers=0, shuffle=True):
     dataloader_dict = dict()
     for m in data_dict.keys():
         dataloader_dict[m] = DataLoader(data_dict[m],
                                         batch_size=batch_size,
                                         num_workers=num_workers,
-                                        shuffle=True)
+                                        shuffle=shuffle)
     return dataloader_dict
 
 
@@ -80,8 +81,8 @@ def compute_mean_std(data_path, data_type="png"):
     channel_sum, channel_square_sum, batch_counter = 0, 0, 0
 
     for imgs, _ in data_loader:
-        channel_sum += torch.mean(imgs, dim=[0, 2, 3])
-        channel_square_sum += torch.mean(imgs ** 2, dim=[0, 2, 3])
+        channel_sum += tmean(imgs, dim=[0, 2, 3])
+        channel_square_sum += tmean(imgs ** 2, dim=[0, 2, 3])
 
         batch_counter += 1
 
@@ -96,8 +97,8 @@ class UNetDataset(Dataset):
         self.images = images
         self.masks = masks
         self.augment = augment
-        self.mean = [0.] if mean is None else mean
-        self.std = [1.] if std is None else std
+        self.mean = [0.] if mean is None else [mean]
+        self.std = [1.] if std is None else [std]
 
     @classmethod
     def from_hdf5_data(cls, hdf5_file, augment=False, mean=None,
@@ -132,8 +133,8 @@ class UNetDataset(Dataset):
         msk_list = [p for p in Path(msk_path).rglob("*.png") if p.is_file()]
 
         # Read images and masks
-        images = [np.array(Image.open(i)) for i in img_list]
-        masks = [np.array(Image.open(i)) for i in msk_list]
+        images = [np.asarray(Image.open(i)) for i in img_list]
+        masks = [np.asarray(Image.open(i)) for i in msk_list]
 
         # Test the model with desired number of samples by passing
         # "num_samples" argument
@@ -171,4 +172,7 @@ class UNetDataset(Dataset):
         mask_tensor = from_numpy(transformed["mask"])
         # Add an extra channel [H, W] --> [1, H, W]
         img_tensor = img_tensor.unsqueeze(0)
-        return img_tensor, mask_tensor
+        # Apply padding to the images and masks (250 --> 256)
+        padded_img = F.pad(img_tensor, (3, 3, 0, 0), mode='constant', value=0)
+        padded_msk = F.pad(mask_tensor, (3, 3, 0, 0), mode='constant', value=0)
+        return padded_img, padded_msk

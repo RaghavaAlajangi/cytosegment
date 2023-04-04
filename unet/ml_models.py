@@ -156,7 +156,7 @@ class AttentionBlock(nn.Module):
         )
 
         self.W_x = nn.Sequential(
-            nn.Conv2d(F_l, F_int, kernel_size=(1, 1), stride=(1, 1),
+            nn.Conv2d(F_l, F_int, kernel_size=(1, 1), stride=(2, 2),
                       padding=0, bias=True),
             nn.BatchNorm2d(F_int)
         )
@@ -170,16 +170,20 @@ class AttentionBlock(nn.Module):
 
         self.relu = nn.ReLU(inplace=True)
 
+        self.up = nn.Upsample(mode='bilinear', scale_factor=2,
+                              align_corners=True)
+
     def forward(self, g, x):
         g1 = self.W_g(g)
         x1 = self.W_x(x)
         psi = self.relu(g1 + x1)
         psi = self.psi(psi)
-        return x * psi
+        up_samp = self.up(psi)
+        return x * up_samp
 
 
 class EncodingBlock(nn.Module):
-    def __init__(self, in_size, out_size, dilation=1, dropout=True):
+    def __init__(self, in_size, out_size, dilation=1, dropout=False):
         super(EncodingBlock, self).__init__()
 
         # Create dilation kernel and padding based on dilation argument
@@ -211,7 +215,7 @@ class EncodingBlock(nn.Module):
 
 class DecodingBlock(nn.Module):
     def __init__(self, in_size, out_size, up_mode,
-                 dropout=False, with_attn=True):
+                 dropout=False, with_attn=False):
 
         super(DecodingBlock, self).__init__()
         self.with_attn = with_attn
@@ -229,38 +233,24 @@ class DecodingBlock(nn.Module):
             )
 
         if self.with_attn:
-            self.attn_block = AttentionBlock(F_g=out_size, F_l=out_size,
-                                             F_int=in_size)
+            self.attn_block = AttentionBlock(F_g=in_size, F_l=out_size,
+                                             F_int=out_size)
 
     def forward(self, x1, x2):
-        # Decode the final layer of encoding block
-        x1 = self.up(x1)
-
-        # Find the height and width differences of two
-        # layers. Shape of layers (B, C, H, W)
-        diff_h = x2.size()[2] - x1.size()[2]
-        diff_w = x2.size()[3] - x1.size()[3]
-
-        # Apply padding to the decoded block to make sure having
-        # the same shapes (decoded block and previous encoding)
-        # before applying attention mapping and concatenation
-
-        x1 = F.pad(x1, [diff_w // 2, diff_w - diff_w // 2,
-                        diff_h // 2, diff_h - diff_h // 2])
-
-        # Apply attention mapping before concatenating
         if self.with_attn:
-            x1 = self.attn_block(x1, x2)
-
-        # Concat up and skip-connection layers
-        x = torch.cat([x2, x1], dim=1)
-        out = self.conv_block(x)
+            out = self.attn_block(x1, x2)
+        else:
+            # Decode the final layer of encoding block
+            x1 = self.up(x1)
+            # Concat up and skip-connection layers
+            x = torch.cat([x2, x1], dim=1)
+            out = self.conv_block(x)
         return out
 
 
 class UNetTunable(nn.Module):
     def __init__(self, in_channels=1, out_classes=1, depth=5, filters=6,
-                 dilation=1, dropout=True, up_mode='upconv', with_attn=False):
+                 dilation=1, dropout=False, up_mode='upconv', with_attn=False):
         """
         Implementation of U-Net: Convolutional Networks for Biomedical
         Image Segmentation (Ronneberger et al., 2015)
@@ -307,7 +297,7 @@ class UNetTunable(nn.Module):
             out_channels = 2 ** (filters + i)
             self.encoder.append(
                 EncodingBlock(prev_channels, out_channels,
-                              dilation, dropout)
+                              dilation=dilation, dropout=dropout)
             )
             prev_channels = out_channels
 
@@ -316,8 +306,8 @@ class UNetTunable(nn.Module):
         for i in reversed(range(depth - 1)):
             out_channels = 2 ** (filters + i)
             self.decoder.append(
-                DecodingBlock(prev_channels, out_channels,
-                              up_mode, with_attn=with_attn)
+                DecodingBlock(prev_channels, out_channels, up_mode,
+                              dropout=dropout, with_attn=with_attn)
             )
             prev_channels = out_channels
 
