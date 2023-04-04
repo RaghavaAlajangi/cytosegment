@@ -3,12 +3,11 @@ venv/
 
 # Training data
 TEST_DATA/
-experiments/
 data/data_labelme
 data/training_testing_set
 test_bash
 htmlcov
-test.py
+
 
 
 # Byte-compiled / optimized / DLL files
@@ -25,3 +24,13 @@ unet.egg-info
 
 tests/data/rtdc_ds_with_img_bg_ml_scores.zip
 tests/test_cli.py
+
+# EXperiment dir
+experiments
+testing_grid_search
+
+# Test scripts
+test.py
+testing.py
+unet/new_unet.py
+unet/ml_inferece.py
