@@ -1,12 +1,12 @@
 import datetime
 import json
-import shutil
 from pathlib import Path
 import time
 
 import numpy as np
 from matplotlib import pyplot as plt
 import torch
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.tensorboard import SummaryWriter
 import yaml
 
@@ -17,7 +17,6 @@ from .ml_metrics import get_metric_with_params
 from .ml_models import get_model_with_params
 from .ml_optimizers import get_optimizer_with_params
 from .ml_schedulers import get_scheduler_with_params
-from .utils import human_format
 
 
 class SetupTrainer:
@@ -31,7 +30,7 @@ class SetupTrainer:
                  max_epochs=100,
                  use_cuda=False,
                  min_ckp_acc=0.85,
-                 early_stop_patience=10,
+                 early_stop_patience=None,
                  path_out="experiments",
                  tensorboard=False,
                  init_from_ckp=None
@@ -47,7 +46,9 @@ class SetupTrainer:
         self.min_ckp_acc = min_ckp_acc
         self.tensorboard = tensorboard
 
-        self.early_stop = EarlyStopping(early_stop_patience)
+        # Create EarlyStop instance only if it is specified
+        if early_stop_patience is not None:
+            self.early_stop = EarlyStopping(early_stop_patience)
         self.device = torch.device("cuda" if self.use_cuda else "cpu")
 
         if self.use_cuda:
@@ -57,9 +58,12 @@ class SetupTrainer:
 
         # Print and save No of model parameters in the result logs
         trainable_params = sum(
-            p.numel() for p in self.model.parameters() if p.requires_grad)
-        self.model_params = human_format(trainable_params)
-        print("Trainable parameters in the model:", self.model_params)
+            p.numel() for p in self.model.parameters() if p.requires_grad
+        )
+
+        # Convert number of parameters into millions
+        self.model_params = round(trainable_params / 1e3, 1)
+        print(f"Trainable parameters in the model:{self.model_params}K")
 
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
@@ -73,13 +77,14 @@ class SetupTrainer:
             self.exp_path.mkdir(parents=True, exist_ok=True)
 
         if self.tensorboard:
-            self.writer = SummaryWriter(str(self.exp_path / "tensorboard/"))
+            tb_path = str(self.exp_path.parents[0] / "tensorboard")
+            run_name = str(self.exp_path.name)
+            self.writer = SummaryWriter(log_dir=tb_path + f"/{run_name}")
 
     @classmethod
-    def with_params(cls, params_file_path):
+    def with_params(cls, params):
         # Load params file (.yaml)
-        params = yaml.safe_load(open(params_file_path))
-
+        # params = yaml.safe_load(open(params_file_path))
         model = get_model_with_params(params)
         dataloaders = get_dataloaders_with_params(params)
         criterion = get_criterion_with_params(params)
@@ -87,24 +92,24 @@ class SetupTrainer:
         optimizer = get_optimizer_with_params(params, model)
         scheduler = get_scheduler_with_params(params, optimizer)
 
-        max_epochs = params.get("max_epochs")
-        use_cuda = params.get("use_cuda")
-        min_ckp_acc = params.get("min_ckp_acc")
-        early_stop_patience = params.get("early_stop_patience")
-        path_out = params.get("path_out")
-        init_from_ckp = params.get("init_from_ckp")
-        tensorboard = params.get("tensorboard")
+        other_params = params.get("others")
+        max_epochs = other_params.get("max_epochs")
+        use_cuda = other_params.get("use_cuda")
+        min_ckp_acc = other_params.get("min_ckp_acc")
+        early_stop_patience = other_params.get("early_stop_patience")
+        path_out = other_params.get("path_out")
+        init_from_ckp = other_params.get("init_from_ckp")
+        tensorboard = other_params.get("tensorboard")
 
         # Create a folder to store experiment results based on current time
         time_now = datetime.datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
         exp_path = Path(path_out) / time_now
         exp_path.mkdir(parents=True, exist_ok=True)
 
-        # Copy experiment params.yaml file in results folder
-        out_file_path = exp_path / Path(params_file_path).name
-
-        # Copy the file from source to destination
-        shutil.copy(params_file_path, out_file_path)
+        # Save session parameters as a params.yaml file
+        out_file_path = exp_path / "train_params.yaml"
+        with open(out_file_path, 'w') as file:
+            yaml.dump(params, file)
 
         return cls(model, dataloaders, criterion, metric, optimizer,
                    scheduler, max_epochs, use_cuda, min_ckp_acc,
@@ -158,8 +163,8 @@ class SetupTrainer:
         return loss_avg, acc_avg
 
     def plot_save_logs(self, logs):
-        with open(self.exp_path / "train_logs.json", "w") as fp:
-            json.dump(logs, fp, indent=1)
+        with open(self.exp_path / "train_logs.yaml", "w") as fp:
+            yaml.dump(logs, fp)
 
         epoch = logs["epochs"]
         train_loss = logs["train_loss"]
@@ -206,18 +211,24 @@ class SetupTrainer:
 
     def save_checkpoint(self, new_ckp_name, mode="jit"):
         if mode == "jit":
-            jit_fold = self.exp_path / "torch_jit"
-            jit_fold.mkdir(parents=True, exist_ok=True)
-            jit_path = str(jit_fold) + f"/{new_ckp_name}_jit.ckp"
+            jit_dir = self.exp_path / "torch_jit"
+            jit_dir.mkdir(parents=True, exist_ok=True)
+            jit_path = str(jit_dir) + f"/{new_ckp_name}_jit.ckp"
             model_scripted = torch.jit.script(self.model)
             model_scripted.save(jit_path)
         else:
-            torch_fold = self.exp_path / "torch_original"
-            torch_fold.mkdir(parents=True, exist_ok=True)
-            org_path = str(torch_fold) + f"/{new_ckp_name}_org.ckp"
+            torch_dir = self.exp_path / "torch_original"
+            torch_dir.mkdir(parents=True, exist_ok=True)
+            org_path = str(torch_dir) + f"/{new_ckp_name}_org.ckp"
             torch.save({"model_state_dict": self.model.state_dict(),
                         "optimizer_state_dict": self.optimizer.state_dict(),
                         }, org_path)
+
+    def add_graph_tb(self):
+        dataiter = iter(self.dataloaders["train"])
+        images, labels = next(dataiter)
+        images = images.to(self.device, dtype=torch.float32)
+        self.writer.add_graph(self.model, images)
 
     def start_train(self):
         start_time = time.time()
@@ -253,10 +264,18 @@ class SetupTrainer:
 
             # Tensorboard tracking loss and accuracies
             if self.tensorboard:
-                self.writer.add_scalar("Training Loss", train_avg_loss, epoch)
-                self.writer.add_scalar("Training Acc", train_avg_acc, epoch)
-                self.writer.add_scalar("Validation Loss", val_avg_loss, epoch)
-                self.writer.add_scalar("Validation Acc", val_avg_acc, epoch)
+                self.writer.add_scalars("Loss Plot (Train vs Valid)",
+                                        {"Train": train_avg_loss,
+                                         "Valid": val_avg_loss},
+                                        epoch)
+                self.writer.add_scalars("Accuracy Plot (Train vs Valid)",
+                                        {"Train": train_avg_acc,
+                                         "Valid": val_avg_acc},
+                                        epoch)
+
+                # self.writer.add_hparams({'lr': 0.1 * i, 'bsize': i},
+                #                         {'hparam/accuracy': 10 * i,
+                #                          'hparam/loss': 10 * i})
 
             if val_avg_acc > self.min_ckp_acc and val_avg_acc == max(
                     val_avg_acc_list):
@@ -266,19 +285,28 @@ class SetupTrainer:
                 self.save_checkpoint(new_ckp_name)
                 train_logs["ckp_flag"].append(epoch)
 
-            if self.scheduler:
+            # Decay the learning rate, if validation accuracy is not improving
+            if self.scheduler and isinstance(self.scheduler, StepLR):
                 self.scheduler.step()
-            self.early_stop(val_avg_loss)
-            if self.early_stop.should_stop:
-                train_logs["early_stop"].append(epoch)
-                print("Early stopping!")
-                break
+            else:
+                self.scheduler.step(val_avg_acc)
+
+            # Track early stopping patience if it is specified
+            if hasattr(self, "early_stop"):
+                # Stop the training, if validation loss is not improving
+                self.early_stop(val_avg_loss)
+                if self.early_stop.should_stop:
+                    train_logs["early_stop"].append(epoch)
+                    print("Early stopping!")
+                    break
         # Calculate training time and save it in results logs
         end_time = time.time() - start_time
         train_time = str(datetime.timedelta(seconds=end_time)).split('.')[0]
         train_logs["training_time"] = train_time
         # Plot and save results logs
         self.plot_save_logs(train_logs)
+        self.add_graph_tb()
+        self.close()
 
     def close(self):
         if self.tensorboard:
