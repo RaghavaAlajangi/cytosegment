@@ -1,22 +1,26 @@
 model:
-  type: "UNetTunable"
-  in_channels: 1
-  out_classes: 1
-  depth: 4
-  filters: 5
-  dilation: 2
-  dropout: False
-  up_mode: 'upconv'
-  with_attn: True
+  type: ["UNetTunable"]
+  in_channels: [1]
+  out_classes: [1]
+  depth: [3]
+  filters: [3]
+  dilation: [1]
+  dropout: [True]
+  up_mode: ['upconv']
+  with_attn: [True]
+
+#model:
+#  type: ["UNet"]
+#  in_channels: [1]
+#  out_classes: [1]
+#  bilinear: [False]
 
 dataset:
-  type: "PNG"
-  data_path: data/training_testing_set/training
-  augmentation: False
-  valid_size: 0.2
-  batch_size: 8
-#  mean: [0.67709]
-#  std: [0.13369]
+  type: ["PNG"]
+  data_path: [data/training_testing_set/training]
+  augmentation: [False]
+  valid_size: [0.2]
+  batch_size: [8]
 
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
@@ -28,56 +32,61 @@ dataset:
   std: [0.13369]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
-  num_workers: 0
+  num_workers: [0]
   # 'num_samples' is useful for testing. Irrespective of the number of
   # samples available in the dataset, trainer takes "num_samples" from
   # the dataset to run the test pipeline. If you do actual training set
-  # this to "null"
-  num_samples: 50
+  # this to ["null"]
+  num_samples: [null]
 
 criterion:
-  type: "FocalTverskyLoss"
-  alpha: 0.3
-  beta: 0.7
-  gamma: 0.75
+  type: ["FocalTverskyLoss"]
+  alpha: [0.3]
+  beta: [0.7]
+  gamma: [0.75]
 
 metric:
-  type: "IoUCoeff"
+  type: ["IoUCoeff"]
 
 optimizer:
-  type: "Adam"
-  learn_rate: 0.001
+  type: ["Adam"]
+  learn_rate: [0.01]
 
-# Decays the learning rate by ``lr_decay_rate`` every ``lr_step_size``
+# Decays the learning rate by ``lr_decay_rate`` every ``patience``
 # epochs. Sometimes model might be ended up within local minima because
 # of the high learning rate. A scheduler will help the model overcome
 # this by minimizing the learning rate progressively.
 
-# NOTE: instead of using step based scheduler, the adaptive scheduler
-# could be more effective to get optimal results.
+# NOTE: [instead of using step based scheduler, the ReduceLROnPlateau
+# scheduler could be more effective to get optimal results.
 scheduler:
-  type: "stepLR"
-  lr_step_size: 10
-  lr_decay_rate: 0.1
+  type: ["ReduceLROnPlateau"]
+  patience: [10]
+  lr_decay_rate: [0.1] # after 10 epochs lr becomes 0.01*0.1 = 0.001
 
-max_epochs: 3
-use_cuda: False
-path_out: "experiments"
+#scheduler:
+#  type: ["stepLR"]
+#  patience: [10]
+#  lr_decay_rate: [0.1] # after 10 epochs lr becomes 0.01*0.1 = 0.001
+others:
+  max_epochs: [100]
+  use_cuda: [True]
+  path_out: ["testing_grid_search"]
 
-# Trainer start saving checkpoints only after the validation
-# accuracy is higher than  'min_ckp_acc'
-min_ckp_acc: 0.9
+  # Trainer start saving checkpoints only after the validation
+  # accuracy is higher than  'min_ckp_acc'
+  min_ckp_acc: [0.89]
 
-# If the model metric (validation loss) starts increasing,
-# 'early stopping' will count the n consequent epochs (patience).
-# If still there is no improvement (after patience) training will
-# be terminated automatically. It saves computational power by
-# discarding the unnecessary epochs.
-early_stop_patience: 10
+  # If the model metric (validation loss) starts increasing,
+  # 'early stopping' will count the n consequent epochs (patience).
+  # If still there is no improvement (after patience) training will
+  # be terminated automatically. It saves computational power by
+  # discarding the unnecessary epochs.
+#  early_stop_patience: [15]
 
-# Start the training where you left by providing
-# previous checkpoint (not jit) path
-init_from_ckp: null
+  # Start the training where you left by providing
+  # previous checkpoint (not jit) path
+  init_from_ckp: [null]
 
-# Specify whether results should be saved with tensorboard
-tensorboard: True
+  # Specify whether results should be saved with tensorboard
+  tensorboard: [True]
