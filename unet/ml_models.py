@@ -170,7 +170,7 @@ class AttentionBlock(nn.Module):
 
         self.relu = nn.ReLU(inplace=True)
 
-        self.up = nn.Upsample(mode='bilinear', scale_factor=2,
+        self.up = nn.Upsample(mode="bilinear", scale_factor=2,
                               align_corners=True)
 
     def forward(self, g, x):
@@ -214,20 +214,19 @@ class EncodingBlock(nn.Module):
 
 
 class DecodingBlock(nn.Module):
-    def __init__(self, in_size, out_size, up_mode,
-                 dropout=False, with_attn=False):
+    def __init__(self, in_size, out_size, up_mode, with_attn=False):
 
         super(DecodingBlock, self).__init__()
         self.with_attn = with_attn
-        self.conv_block = EncodingBlock(in_size, out_size, dropout=dropout)
+        self.conv_block = EncodingBlock(in_size, out_size)
 
-        if up_mode == 'upconv':
+        if up_mode == "upconv":
             self.up = nn.ConvTranspose2d(in_size, out_size,
                                          kernel_size=(2, 2),
                                          stride=(2, 2))
-        elif up_mode == 'upsample':
+        elif up_mode == "upsample":
             self.up = nn.Sequential(
-                nn.Upsample(mode='bilinear', scale_factor=2,
+                nn.Upsample(mode="bilinear", scale_factor=2,
                             align_corners=True),
                 nn.Conv2d(in_size, out_size, kernel_size=(1, 1)),
             )
@@ -250,7 +249,7 @@ class DecodingBlock(nn.Module):
 
 class UNetTunable(nn.Module):
     def __init__(self, in_channels=1, out_classes=1, depth=5, filters=6,
-                 dilation=1, dropout=False, up_mode='upconv', with_attn=False):
+                 dilation=1, dropout=False, up_mode="upconv", with_attn=False):
         """
         Implementation of U-Net: Convolutional Networks for Biomedical
         Image Segmentation (Ronneberger et al., 2015)
@@ -268,15 +267,15 @@ class UNetTunable(nn.Module):
                 Depth of the network
             filters: int
                 Number of filters in the CNN layers is created based on
-                'filters' and 'depth' arguments in a loop by using the
+                "filters" and "depth" arguments in a loop by using the
                 below formula.
                 for i in range(depth):
                     2**(filters + i)
             dilation: int
                 Dilation rate to be introduced
             up_mode: str
-                one of 'upconv' or 'upsample'.'upconv' uses transposed
-                convolutions for learned upsampling. 'upsample' will use
+                one of "upconv" or "upsample"."upconv" uses transposed
+                convolutions for learned upsampling. "upsample" will use
                 bilinear upsampling.
             with_attn: boolean
                 specify whether attention blocks are included when building
@@ -287,7 +286,7 @@ class UNetTunable(nn.Module):
         """
 
         super(UNetTunable, self).__init__()
-        assert up_mode in ('upconv', 'upsample')
+        assert up_mode in ("upconv", "upsample")
 
         prev_channels = in_channels
 
@@ -307,7 +306,7 @@ class UNetTunable(nn.Module):
             out_channels = 2 ** (filters + i)
             self.decoder.append(
                 DecodingBlock(prev_channels, out_channels, up_mode,
-                              dropout=dropout, with_attn=with_attn)
+                              with_attn=with_attn)
             )
             prev_channels = out_channels
 

@@ -2,12 +2,12 @@ model:
   type: ["UNetTunable"]
   in_channels: [1]
   out_classes: [1]
-  depth: [3]
-  filters: [3]
-  dilation: [1]
-  dropout: [True]
-  up_mode: ['upconv']
-  with_attn: [True]
+  depth: [3, 4, 5]
+  filters: [3, 4, 5]
+  dilation: [1, 2]
+  dropout: [True, False]
+  up_mode: ["upconv", "upsample"]
+  with_attn: [True, False]
 
 #model:
 #  type: ["UNet"]
@@ -18,9 +18,9 @@ model:
 dataset:
   type: ["PNG"]
   data_path: [data/training_testing_set/training]
-  augmentation: [False]
+  augmentation: [False, True]
   valid_size: [0.2]
-  batch_size: [8]
+  batch_size: [8, 16, 32]
 
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
@@ -32,7 +32,7 @@ dataset:
   std: [0.13369]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
-  num_workers: [0]
+  num_workers: [8]
   # 'num_samples' is useful for testing. Irrespective of the number of
   # samples available in the dataset, trainer takes "num_samples" from
   # the dataset to run the test pipeline. If you do actual training set
@@ -41,9 +41,9 @@ dataset:
 
 criterion:
   type: ["FocalTverskyLoss"]
-  alpha: [0.3]
-  beta: [0.7]
-  gamma: [0.75]
+  alpha: [0.33]
+  beta: [0.33]
+  gamma: [0.75, 2.5]
 
 metric:
   type: ["IoUCoeff"]
@@ -75,7 +75,7 @@ others:
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'
-  min_ckp_acc: [0.89]
+  min_ckp_acc: [0.88]
 
   # If the model metric (validation loss) starts increasing,
   # 'early stopping' will count the n consequent epochs (patience).
