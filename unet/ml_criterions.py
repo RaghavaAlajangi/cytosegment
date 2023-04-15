@@ -55,11 +55,10 @@ def get_criterion_with_params(params):
         return TverskyLoss(alpha, beta)
 
     if criterion_type.lower() == "focaltverskyloss":
-        assert {"alpha", "beta", "gamma"}.issubset(criterion_params)
+        assert {"alpha", "gamma"}.issubset(criterion_params)
         alpha = criterion_params.get("alpha")
-        beta = criterion_params.get("beta")
         gamma = criterion_params.get("gamma")
-        return FocalTverskyLoss(alpha, beta, gamma)
+        return FocalTverskyLoss(alpha, gamma)
 
 
 class DiceLoss(nn.Module):
@@ -71,7 +70,7 @@ class DiceLoss(nn.Module):
 
     def __init__(self):
         super(DiceLoss, self).__init__()
-        self.eps = 1
+        self.eps = 1e-6
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -101,7 +100,7 @@ class DiceBCELoss(nn.Module):
 
     def __init__(self):
         super(DiceBCELoss, self).__init__()
-        self.eps = 1
+        self.eps = 1e-6
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -133,7 +132,7 @@ class IoULoss(nn.Module):
 
     def __init__(self):
         super(IoULoss, self).__init__()
-        self.eps = 1
+        self.eps = 1e-6
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -170,7 +169,7 @@ class FocalLoss(nn.Module):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
-        self.eps = 1
+        self.eps = 1e-6
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -217,7 +216,7 @@ class TverskyLoss(nn.Module):
         super(TverskyLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
-        self.eps = 1
+        self.eps = 1e-6
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -245,12 +244,11 @@ class FocalTverskyLoss(nn.Module):
     gamma modifier from Focal Loss.
     """
 
-    def __init__(self, alpha=0.3, beta=0.7, gamma=0.75):
+    def __init__(self, alpha=0.3, gamma=0.75):
         super(FocalTverskyLoss, self).__init__()
         self.alpha = alpha
-        self.beta = beta
         self.gamma = gamma
-        self.eps = 1
+        self.eps = 1e-6
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -262,13 +260,10 @@ class FocalTverskyLoss(nn.Module):
         targets = targets.view(-1)
 
         # True Positives, False Positives & False Negatives
-        true_positives = (predicts * targets).sum()
-        flase_positives = ((1 - targets) * predicts).sum()
-        false_negatives = (targets * (1 - predicts)).sum()
-
-        tversky = (true_positives + self.eps) / (self.eps + true_positives +
-                                                 self.alpha * flase_positives +
-                                                 self.beta * false_negatives)
-        FocalTversky = (1 - tversky) ** self.gamma
-
-        return FocalTversky
+        TP = (predicts * targets).sum()
+        FP = ((1 - targets) * predicts).sum()
+        FN = (targets * (1 - predicts)).sum()
+        tversky = (TP + self.eps) / (self.eps + TP + self.alpha * FP +
+                                     (1 - self.alpha) * FN)
+        focal_tversky = (1 - tversky) ** self.gamma
+        return focal_tversky
