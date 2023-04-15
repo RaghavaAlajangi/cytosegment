@@ -3,8 +3,7 @@ venv/
 
 # Training data
 TEST_DATA/
-data/data_labelme
-data/training_testing_set
+data/
 test_bash
 htmlcov
 
@@ -27,7 +26,8 @@ tests/test_cli.py
 
 # EXperiment dir
 experiments
-testing_grid_search
+hyper_tuning_1
+hpc_results
 
 # Test scripts
 test.py

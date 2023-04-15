@@ -12,6 +12,7 @@ import yaml
 
 from .early_stopping import EarlyStopping
 from .ml_criterions import get_criterion_with_params
+# from .ml_dataset_old import get_dataloaders_with_params
 from .ml_dataset import get_dataloaders_with_params
 from .ml_metrics import get_metric_with_params
 from .ml_models import get_model_with_params
@@ -109,7 +110,7 @@ class SetupTrainer:
         # Save session parameters as a params.yaml file
         out_file_path = exp_path / "train_params.yaml"
         with open(out_file_path, 'w') as file:
-            yaml.dump(params, file)
+            yaml.dump(params, file, sort_keys=False)
 
         return cls(model, dataloaders, criterion, metric, optimizer,
                    scheduler, max_epochs, use_cuda, min_ckp_acc,
@@ -154,17 +155,17 @@ class SetupTrainer:
                 predict_list.append(predicts)
                 target_list.append(labels)
 
-        predict_torch = torch.cat(predict_list, dim=0)
-        target_torch = torch.cat(target_list, dim=0)
+        predict_tensor = torch.cat(predict_list, dim=0)
+        target_tensor = torch.cat(target_list, dim=0)
 
-        scores = self.metric(predict_torch, target_torch)
+        scores = self.metric(predict_tensor, target_tensor)
         loss_avg = float(np.stack(loss_list).mean())
         acc_avg = float(scores.mean())
         return loss_avg, acc_avg
 
     def plot_save_logs(self, logs):
         with open(self.exp_path / "train_logs.yaml", "w") as fp:
-            yaml.dump(logs, fp)
+            yaml.dump(logs, fp, sort_keys=False)
 
         epoch = logs["epochs"]
         train_loss = logs["train_loss"]
@@ -187,7 +188,7 @@ class SetupTrainer:
         plt.title("Accuracy plot")
         plt.xlabel("Epochs")
         plt.ylabel("Accuracy")
-        plt.ylim(0.6, 1.0)
+        plt.ylim(0.3, 1.0)
         plt.grid()
         plt.subplot(122)
         plt.plot(epoch, train_loss, color="red", label="Train loss")
@@ -198,7 +199,7 @@ class SetupTrainer:
         plt.title("Loss plot")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
-        plt.ylim(0.0, 0.5)
+        plt.ylim(0.0, 0.9)
         plt.grid()
         plt.savefig(self.exp_path / "train_plot.png")
         # plt.show()
