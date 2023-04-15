@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 from unet.ml_criterions import get_criterion_with_params
-from unet.ml_dataset import get_dataloaders_with_params
+from unet.ml_dataset_old import get_dataloaders_with_params
 from unet.ml_metrics import get_metric_with_params
 from unet.ml_models import get_model_with_params
 from unet.ml_optimizers import get_optimizer_with_params

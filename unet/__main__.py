@@ -2,6 +2,7 @@ from datetime import timedelta
 import itertools
 from pathlib import Path
 import time
+import torch
 
 import click
 import yaml
@@ -39,13 +40,14 @@ def main(params_path):
     params = yaml.safe_load(open(params_path))
     params_list = create_comb_dicts(params)
     print("Total number of experiments:", len(params_list))
-    for params in params_list:
+    print("Cuda available:", torch.cuda.is_available())
+    for params in params_list[:1]:
         trainer = SetupTrainer.with_params(params)
         tik = time.time()
         print("Started training.....")
         trainer.start_train()
         tok = time.time() - tik
-        train_time = str(timedelta(seconds=tok)).split('.')[0]
+        train_time = str(timedelta(seconds=tok)).split(".")[0]
         print(f"Total training time: {train_time}")
 
 

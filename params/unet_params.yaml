@@ -2,12 +2,13 @@ model:
   type: ["UNetTunable"]
   in_channels: [1]
   out_classes: [1]
-  depth: [3, 4, 5]
-  filters: [3, 4, 5]
-  dilation: [1, 2]
-  dropout: [True, False]
-  up_mode: ["upconv", "upsample"]
-  with_attn: [True, False]
+  depth: [4, 5]
+  filters: [4, 5]
+  dilation: [1]
+  dropout: [False]
+  up_mode: ["upconv"]
+  with_attn: [True]
+  bileaner: [False]
 
 #model:
 #  type: ["UNet"]
@@ -17,9 +18,10 @@ model:
 
 dataset:
   type: ["PNG"]
-  data_path: [data/training_testing_set/training]
+  data_path: [data/training_testing_set_w_beads/training_testing_set_w_beads/training]
+#  data_path: [data/training_testing_set/training]
   augmentation: [False, True]
-  valid_size: [0.2]
+  valid_size: [0.15]
   batch_size: [8, 16, 32]
 
   # Mean and std values for the whole dataset should be computed before
@@ -28,8 +30,8 @@ dataset:
   # If there is a change in the dataset (either inclusion or exclusion of
   # image and mask pairs into the dataset), we need to recalculate the mean
   # and std values of the dataset.
-  mean: [0.67709]
-  std: [0.13369]
+  mean: [0.486]
+  std: [0.115]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
   num_workers: [8]
@@ -41,37 +43,32 @@ dataset:
 
 criterion:
   type: ["FocalTverskyLoss"]
-  alpha: [0.33]
-  beta: [0.33]
-  gamma: [0.75, 2.5]
+  alpha: [0.3]
+  gamma: [2]
 
 metric:
   type: ["IoUCoeff"]
 
 optimizer:
   type: ["Adam"]
-  learn_rate: [0.01]
+  learn_rate: [0.01, 0.001, 0.0001]
 
 # Decays the learning rate by ``lr_decay_rate`` every ``patience``
 # epochs. Sometimes model might be ended up within local minima because
 # of the high learning rate. A scheduler will help the model overcome
 # this by minimizing the learning rate progressively.
 
-# NOTE: [instead of using step based scheduler, the ReduceLROnPlateau
+# NOTE: instead of using step based scheduler, the ReduceLROnPlateau
 # scheduler could be more effective to get optimal results.
 scheduler:
   type: ["ReduceLROnPlateau"]
-  patience: [10]
-  lr_decay_rate: [0.1] # after 10 epochs lr becomes 0.01*0.1 = 0.001
+  patience: [15]
+  lr_decay_rate: [0.5] # after 10 epochs lr becomes 0.01*0.1 = 0.001
 
-#scheduler:
-#  type: ["stepLR"]
-#  patience: [10]
-#  lr_decay_rate: [0.1] # after 10 epochs lr becomes 0.01*0.1 = 0.001
 others:
-  max_epochs: [100]
+  max_epochs: [150]
   use_cuda: [True]
-  path_out: ["testing_grid_search"]
+  path_out: ["hyper_tuning_1"]
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'
@@ -82,7 +79,7 @@ others:
   # If still there is no improvement (after patience) training will
   # be terminated automatically. It saves computational power by
   # discarding the unnecessary epochs.
-#  early_stop_patience: [15]
+  # early_stop_patience: [15]
 
   # Start the training where you left by providing
   # previous checkpoint (not jit) path
