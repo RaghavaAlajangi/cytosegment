@@ -34,7 +34,7 @@ def get_dataloaders_with_params(params):
 
     train_dataset = UNetDataset(img_train, msk_train, augment=augmentation,
                                 mean=mean, std=std)
-    valid_dataset = UNetDataset(img_train, msk_train, augment=False,
+    valid_dataset = UNetDataset(img_valid, msk_valid, augment=False,
                                 mean=mean, std=std)
 
     data_dict = {
@@ -106,7 +106,7 @@ class UNetDataset(Dataset):
         msk = msk / msk.max()  # Make sure mask is binary
         if self.augment:
             compose_obj = A.Compose([
-                # A.Rotate(7, border_mode=4, p=0.5),
+                A.Rotate(7, border_mode=4, p=0.5),
                 A.VerticalFlip(p=0.3),
                 A.RandomBrightness(limit=(-1.0, 1.0), p=0.5),
                 A.Normalize(self.mean, self.std,
