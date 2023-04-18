@@ -41,7 +41,7 @@ def main(params_path):
     params_list = create_comb_dicts(params)
     print("Total number of experiments:", len(params_list))
     print("Cuda available:", torch.cuda.is_available())
-    for params in params_list[:1]:
+    for params in params_list:
         trainer = SetupTrainer.with_params(params)
         tik = time.time()
         print("Started training.....")

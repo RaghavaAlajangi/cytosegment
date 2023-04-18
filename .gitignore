@@ -24,9 +24,12 @@ unet.egg-info
 tests/data/rtdc_ds_with_img_bg_ml_scores.zip
 tests/test_cli.py
 
-# EXperiment dir
+SECRETS
+
+# Experiment dir
 experiments
 hyper_tuning_1
+hyper_tuning_2
 hpc_results
 
 # Test scripts
