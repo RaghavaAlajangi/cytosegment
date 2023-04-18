@@ -63,8 +63,9 @@ class SetupTrainer:
         )
 
         # Convert number of parameters into millions
-        self.model_params = round(trainable_params / 1e3, 1)
-        print(f"Trainable parameters in the model:{self.model_params}K")
+        # self.model_params = round(trainable_params / 1e3, 1)
+        self.model_params = trainable_params
+        print(f"Trainable parameters in the model:{self.model_params}")
 
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
@@ -165,25 +166,32 @@ class SetupTrainer:
 
     def plot_save_logs(self, logs):
         with open(self.exp_path / "train_logs.yaml", "w") as fp:
-            yaml.dump(logs, fp, sort_keys=False)
+            yaml.dump(logs, fp, sort_keys=False, default_flow_style=None)
 
         epoch = logs["epochs"]
         train_loss = logs["train_loss"]
         train_acc = logs["train_acc"]
         val_loss = logs["val_loss"]
         val_acc = logs["val_acc"]
-        ckp_epochs = logs["ckp_flag"]
+        ckp_data = logs["ckp_flags"]
         early_stop_epoch = logs["early_stop"]
-        ckp_val_acc = [val_acc[epoch.index(ep)] for ep in ckp_epochs]
-        ckp_val_loss = [val_loss[epoch.index(ep)] for ep in early_stop_epoch]
+        if len(ckp_data) != 0:
+            ckp_epochs = np.array(ckp_data)[:, 0]
+            ckp_val_acc = np.array(ckp_data)[:, 1]
+            ckp_val_loss = np.array(ckp_data)[:, 2]
+        else:
+            ckp_epochs, ckp_val_acc, ckp_val_loss = [], [], []
 
         plt.figure(figsize=(14, 7), facecolor=(1, 1, 1))
         plt.rc("grid", linestyle="--", color="lightgrey")
         plt.subplot(121)
-        plt.plot(epoch, train_acc, color="red", label="Train accuracy")
-        plt.plot(epoch, val_acc, color="green", label="Valid accuracy")
-        plt.scatter(ckp_epochs, ckp_val_acc, c="blue", s=20,
-                    marker="x", label="Saved_ckp")
+        plt.plot(epoch, train_acc, color="red", label="Train accuracy",
+                 zorder=1)
+        plt.plot(epoch, val_acc, color="green", label="Valid accuracy",
+                 zorder=2)
+        if len(ckp_epochs) > 1:
+            plt.scatter(ckp_epochs, ckp_val_acc, c="blue", s=20, marker="x",
+                        label=f"Saved_ckp(>={self.min_ckp_acc:.2f})", zorder=3)
         plt.legend(loc="lower right")
         plt.title("Accuracy plot")
         plt.xlabel("Epochs")
@@ -191,15 +199,16 @@ class SetupTrainer:
         plt.ylim(0.3, 1.0)
         plt.grid()
         plt.subplot(122)
-        plt.plot(epoch, train_loss, color="red", label="Train loss")
-        plt.plot(epoch, val_loss, color="green", label="Valid loss")
-        plt.scatter(early_stop_epoch, ckp_val_loss, c="blue", s=20,
-                    marker="x", label="Early_stopping")
+        plt.plot(epoch, train_loss, color="red", label="Train loss", zorder=1)
+        plt.plot(epoch, val_loss, color="green", label="Valid loss", zorder=2)
+        if len(early_stop_epoch) == 1:
+            plt.scatter(early_stop_epoch, ckp_val_loss, c="blue", s=20,
+                        marker="x", label="Early_stopping", zorder=3)
         plt.legend(loc="upper right")
         plt.title("Loss plot")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
-        plt.ylim(0.0, 0.9)
+        plt.ylim(-0.01, 0.5)
         plt.grid()
         plt.savefig(self.exp_path / "train_plot.png")
         # plt.show()
@@ -238,13 +247,13 @@ class SetupTrainer:
                       "train_samples": len(self.dataloaders["train"].dataset),
                       "valid_samples": len(self.dataloaders["valid"].dataset),
                       "training_time": 0,
+                      "ckp_flags": [],
                       "epochs": [],
                       "dynamicLR": [],
                       "train_loss": [],
                       "train_acc": [],
                       "val_loss": [],
                       "val_acc": [],
-                      "ckp_flag": [],
                       "early_stop": []
                       }
         for epoch in range(1, self.max_epochs + 1):
@@ -284,7 +293,9 @@ class SetupTrainer:
                                f"{int(train_avg_acc * 1e4)}_validAcc_" \
                                f"{int(val_avg_acc * 1e4)}"
                 self.save_checkpoint(new_ckp_name)
-                train_logs["ckp_flag"].append(epoch)
+                train_logs["ckp_flags"].append(
+                    [epoch, val_avg_acc, val_avg_loss]
+                )
 
             # Decay the learning rate, if validation accuracy is not improving
             if self.scheduler and isinstance(self.scheduler, StepLR):
