@@ -45,7 +45,7 @@ class DoubleConv(nn.Module):
             nn.Conv2d(mid_channels, out_channels, kernel_size=(3, 3),
                       padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x):
@@ -146,7 +146,7 @@ class UNet(nn.Module):
 
 
 class AttentionBlock(nn.Module):
-    def __init__(self, F_g, F_l, F_int):
+    def __init__(self, F_g, F_l, F_int, activation="relu"):
         super(AttentionBlock, self).__init__()
 
         self.W_g = nn.Sequential(
@@ -168,7 +168,11 @@ class AttentionBlock(nn.Module):
             nn.Sigmoid()
         )
 
-        self.relu = nn.ReLU(inplace=True)
+        # Select the activation function
+        if activation.lower() == "relu":
+            self.active_func = nn.ReLU(inplace=True)
+        else:
+            self.active_func = nn.LeakyReLU(0.1, inplace=True)
 
         self.up = nn.Upsample(mode="bilinear", scale_factor=2,
                               align_corners=True)
@@ -176,31 +180,37 @@ class AttentionBlock(nn.Module):
     def forward(self, g, x):
         g1 = self.W_g(g)
         x1 = self.W_x(x)
-        psi = self.relu(g1 + x1)
+        psi = self.active_func(g1 + x1)
         psi = self.psi(psi)
         up_samp = self.up(psi)
         return x * up_samp
 
 
 class EncodingBlock(nn.Module):
-    def __init__(self, in_size, out_size, dilation=1, dropout=False):
+    def __init__(self, in_size, out_size, dilation=1, dropout=False,
+                 activation="relu"):
         super(EncodingBlock, self).__init__()
 
         # Create dilation kernel and padding based on dilation argument
         dilation_kernel = (1, 1) if dilation == 1 else (dilation, dilation)
+        # Select the activation function
+        if activation.lower() == "relu":
+            active_func = nn.ReLU(inplace=True)
+        else:
+            active_func = nn.LeakyReLU(0.1, inplace=True)
 
         block = [
             nn.Conv2d(in_size, out_size,
                       kernel_size=(3, 3),
                       padding=dilation,
                       dilation=dilation_kernel),
-            nn.ReLU(),
+            active_func,
             nn.BatchNorm2d(out_size),
             nn.Conv2d(out_size, out_size,
                       kernel_size=(3, 3),
                       padding=dilation,
                       dilation=dilation_kernel),
-            nn.ReLU(),
+            active_func,
             nn.BatchNorm2d(out_size),
         ]
         if dropout:
@@ -214,11 +224,12 @@ class EncodingBlock(nn.Module):
 
 
 class DecodingBlock(nn.Module):
-    def __init__(self, in_size, out_size, up_mode, with_attn=False):
+    def __init__(self, in_size, out_size, up_mode, attention=False,
+                 activation="relu"):
 
         super(DecodingBlock, self).__init__()
-        self.with_attn = with_attn
-        self.conv_block = EncodingBlock(in_size, out_size)
+        self.conv_block = EncodingBlock(in_size, out_size,
+                                        activation=activation)
 
         if up_mode == "upconv":
             self.up = nn.ConvTranspose2d(in_size, out_size,
@@ -231,25 +242,27 @@ class DecodingBlock(nn.Module):
                 nn.Conv2d(in_size, out_size, kernel_size=(1, 1)),
             )
 
-        if self.with_attn:
+        if attention:
             self.attn_block = AttentionBlock(F_g=in_size, F_l=out_size,
-                                             F_int=out_size)
+                                             F_int=out_size,
+                                             activation=activation)
 
-    def forward(self, x1, x2):
+    def forward(self, prev_encode, curr_decode):
         if self.with_attn:
-            out = self.attn_block(x1, x2)
+            out = self.attn_block(prev_encode, curr_decode)
         else:
             # Decode the final layer of encoding block
-            x1 = self.up(x1)
+            up_prev_encode = self.up(prev_encode)
             # Concat up and skip-connection layers
-            x = torch.cat([x2, x1], dim=1)
+            x = torch.cat([curr_decode, up_prev_encode], dim=1)
             out = self.conv_block(x)
         return out
 
 
 class UNetTunable(nn.Module):
     def __init__(self, in_channels=1, out_classes=1, depth=5, filters=6,
-                 dilation=1, dropout=False, up_mode="upconv", with_attn=False):
+                 dilation=1, dropout=False, up_mode="upconv", attention=False,
+                 activation="relu"):
         """
         Implementation of U-Net: Convolutional Networks for Biomedical
         Image Segmentation (Ronneberger et al., 2015)
@@ -296,7 +309,8 @@ class UNetTunable(nn.Module):
             out_channels = 2 ** (filters + i)
             self.encoder.append(
                 EncodingBlock(prev_channels, out_channels,
-                              dilation=dilation, dropout=dropout)
+                              dilation=dilation, dropout=dropout,
+                              activation=activation)
             )
             prev_channels = out_channels
 
@@ -306,7 +320,7 @@ class UNetTunable(nn.Module):
             out_channels = 2 ** (filters + i)
             self.decoder.append(
                 DecodingBlock(prev_channels, out_channels, up_mode,
-                              with_attn=with_attn)
+                              attention=attention, activation=activation)
             )
             prev_channels = out_channels
 
