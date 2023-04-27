@@ -16,20 +16,25 @@ def get_metric_with_params(params):
 
 
 class DiceCoeff(nn.Module):
-    def __init__(self, smooth=1e-6):
+    def __init__(self, smooth=1e-6, thresh=0.45):
         super(DiceCoeff, self).__init__()
         self.smooth = smooth
+        self.thresh = thresh
 
     def forward(self, predicts, targets):
         # Apply activation. comment out if your model contains
         # a sigmoid or equivalent activation layer
         predicts = torch.sigmoid(predicts)
-        # flatten label and prediction tensors
-        predicts = predicts.view(-1)
-        targets = targets.view(-1)
-        intersection = (predicts * targets).sum()
-        dice_coeff = (2. * intersection + self.smooth) / \
-                     (predicts.sum() + targets.sum() + self.smooth)
+
+        # Flatten the predictions and targets
+        predicts = predicts.view(predicts.shape[0], -1) > self.thresh
+        targets = targets.view(targets.shape[0], -1) > self.thresh
+
+        # Compute numerator and denominator
+        numerator = 2 * torch.logical_and(predicts, targets).sum(dim=1)
+        denominator = predicts.sum(dim=1) + targets.sum(dim=1)
+        # Add smooth to avoid 0/0
+        dice_coeff = (numerator + self.smooth) / (denominator + self.smooth)
         return dice_coeff
 
 
@@ -43,23 +48,16 @@ class IoUCoeff(nn.Module):
         # Apply activation. comment out if your model contains
         # a sigmoid or equivalent activation layer
         predicts = torch.sigmoid(predicts)
-        # Squeeze channel dim - (BATCH x 1 x H x W) --> (BATCH x H x W)
-        if len(predicts.shape) == 4:
-            predicts = predicts.squeeze(1)
-        if len(targets.shape) == 4:
-            targets = targets.squeeze(1)
-        # Make sure predictions and targets are binarized
-        predicts = predicts > self.thresh
-        targets = targets > self.thresh
-        # Will be zero if Truth=0 or Prediction=0
-        intersection = (predicts & targets).float().sum((1, 2))
-        # Will be zero if both are 0
-        union = (predicts | targets).float().sum((1, 2))
-        # We smooth our division to avoid 0/0
+        # Flatten and binarize the predictions and targets
+        predicts = predicts.view(predicts.shape[0], -1) > self.thresh
+        targets = targets.view(targets.shape[0], -1) > self.thresh
+
+        # Compute intersection and union
+        intersection = torch.logical_and(predicts, targets).sum(dim=1)
+        union = torch.logical_or(predicts, targets).sum(dim=1)
+        # Add smooth to avoid 0/0
         iou = (intersection + self.smooth) / (union + self.smooth)
-        # This is equal to comparing with thresholds
-        iou_score = torch.clamp(20 * (iou - 0.5), 0, 10).ceil() / 10
-        return iou_score.detach().cpu().numpy()
+        return iou
 
 
 class PixelHit(nn.Module):
