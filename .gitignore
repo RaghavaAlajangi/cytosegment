@@ -3,15 +3,12 @@ venv/
 
 # Training data
 TEST_DATA/
-data/
-test_bash
+all_data/
 htmlcov
-
 
 
 # Byte-compiled / optimized / DLL files
 __pycache__
-
 .ipynb
 .idea/
 .ipynb_checkpoints/
@@ -24,16 +21,14 @@ unet.egg-info
 tests/data/rtdc_ds_with_img_bg_ml_scores.zip
 tests/test_cli.py
 
-SECRETS
-
 # Experiment dir
 experiments
 hyper_tuning_1
 hyper_tuning_2
+hyper_tuning_3
 hpc_results
 
 # Test scripts
 test.py
 testing.py
 unet/new_unet.py
-unet/ml_inferece.py
