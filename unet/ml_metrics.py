@@ -16,7 +16,7 @@ def get_metric_with_params(params):
 
 
 class DiceCoeff(nn.Module):
-    def __init__(self, smooth=1e-6, thresh=0.45):
+    def __init__(self, smooth=1e-6, thresh=0.5):
         super(DiceCoeff, self).__init__()
         self.smooth = smooth
         self.thresh = thresh
@@ -39,7 +39,7 @@ class DiceCoeff(nn.Module):
 
 
 class IoUCoeff(nn.Module):
-    def __init__(self, smooth=1e-6, thresh=0.45):
+    def __init__(self, smooth=1e-6, thresh=0.5):
         super(IoUCoeff, self).__init__()
         self.smooth = smooth
         self.thresh = thresh
@@ -61,7 +61,7 @@ class IoUCoeff(nn.Module):
 
 
 class PixelHit(nn.Module):
-    def __init__(self, smooth=1e-6, thresh=0.45):
+    def __init__(self, smooth=1e-6, thresh=0.5):
         super(PixelHit, self).__init__()
         self.smooth = smooth
         self.thresh = thresh
