@@ -1,4 +1,5 @@
 from pathlib import Path
+import zipfile
 
 import albumentations as A
 import h5py
@@ -32,7 +33,12 @@ def get_dataloaders_with_params(params):
     num_workers = dataset_params.get("num_workers")
     min_max = dataset_params.get("min_max")
 
-    images, masks = read_suffle_data(data_path)
+    pathout = Path(data_path).parents[0]
+    unzip_data(data_path, pathout)
+
+    train_data_path = pathout / "training_testing_set_w_beads" / "training"
+
+    images, masks = read_suffle_data(train_data_path)
     images, masks = crop_data(images, masks)
     train_imgs, valid_imgs, train_msks, valid_msks = split_data(images, masks,
                                                                 valid_size)
@@ -51,6 +57,12 @@ def get_dataloaders_with_params(params):
     }
     dataloader_dict = create_dataloaders(data_dict, batch_size, num_workers)
     return dataloader_dict
+
+
+def unzip_data(pathin, pathout):
+
+    with zipfile.ZipFile(pathin, 'r') as zip_ref:
+        zip_ref.extractall(pathout)
 
 
 def read_suffle_data(data_path, seed=42):
