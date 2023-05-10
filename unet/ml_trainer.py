@@ -1,5 +1,4 @@
 import datetime
-import json
 from pathlib import Path
 import time
 
@@ -18,6 +17,33 @@ from .ml_metrics import get_metric_with_params
 from .ml_models import get_model_with_params
 from .ml_optimizers import get_optimizer_with_params
 from .ml_schedulers import get_scheduler_with_params
+from .ml_inferece import inference
+
+
+def plot_valid_results(results_path, n, image_torch, target_torch,
+                       predict_torch):
+    results_path = results_path / "valid_results"
+    results_path.mkdir(parents=True, exist_ok=True)
+
+    img = image_torch.squeeze(1).detach().cpu().numpy()[0]
+    msk = target_torch.detach().cpu().numpy()[0]
+    pred = torch.sigmoid(predict_torch).squeeze(1).detach().cpu().numpy()[0]
+
+    plt.figure(figsize=(20, 4))
+    plt.subplot(131)
+    plt.title("Original image")
+    plt.imshow(img, 'gray')
+    plt.axis("off")
+    plt.subplot(132)
+    plt.title("Ground truth")
+    plt.imshow(msk[0, :, :], 'gray')
+    plt.axis("off")
+    plt.subplot(133)
+    plt.title("Prediction")
+    plt.imshow(pred, 'gray')
+    plt.axis("off")
+    plt.savefig(results_path / f"pred{n + 1}.png")
+    plt.close()
 
 
 class SetupTrainer:
@@ -62,8 +88,6 @@ class SetupTrainer:
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
 
-        # Convert number of parameters into millions
-        # self.model_params = round(trainable_params / 1e3, 1)
         self.model_params = trainable_params
         print(f"Trainable parameters in the model:{self.model_params}")
 
@@ -78,6 +102,12 @@ class SetupTrainer:
             self.exp_path = Path(path_out) / time_now
             self.exp_path.mkdir(parents=True, exist_ok=True)
 
+        # Create a folder to save model checkpoints
+        ckp_path = self.exp_path.parents[0] / "checkpoints"
+        self.ckp_path = ckp_path / self.exp_path.name
+        self.ckp_path.mkdir(parents=True, exist_ok=True)
+
+        # Create a folder to save logs with tensorboard
         if self.tensorboard:
             tb_path = str(self.exp_path.parents[0] / "tensorboard")
             run_name = str(self.exp_path.name)
@@ -125,26 +155,26 @@ class SetupTrainer:
         for param in self.model.features.parameters():
             param.requires_grad = False
 
-    def epoch_runner(self, mode):
+    def epoch_runner(self, epoch, mode):
         if mode.lower() == 'train':
             self.model.train()
         if mode.lower() == 'valid':
             self.model.eval()
         loss_list = []
         predict_list = []
-        target_list = []
+        mask_list = []
         # Get batch of images and labels iteratively
-        for images, labels in self.dataloaders[mode]:
+        for images, masks in self.dataloaders[mode]:
             images = images.to(self.device, dtype=torch.float32)
-            labels = labels.to(self.device, dtype=torch.float32)
+            masks = masks.to(self.device, dtype=torch.float32)
             # Zero the parameter gradients
             self.optimizer.zero_grad()
             # Track history only in train mode
             with torch.set_grad_enabled(mode.lower() == 'train'):
                 predicts = self.model(images)
                 # [B, 1, H, W] --> [B, H, W] for loss calculation
-                predicts = predicts.squeeze(1)
-                loss = self.criterion(predicts, labels)
+                # predicts = predicts.squeeze(1)
+                loss = self.criterion(predicts, masks)
                 # Backward + optimize only in train mode
                 if mode.lower() == 'train':
                     loss.backward()
@@ -154,20 +184,21 @@ class SetupTrainer:
                 loss_list.append(loss_item)
 
                 predict_list.append(predicts)
-                target_list.append(labels)
+                mask_list.append(masks)
+
+                if mode.lower() == "valid":
+                    plot_valid_results(self.exp_path, epoch, images,
+                                       masks, predicts)
 
         predict_tensor = torch.cat(predict_list, dim=0)
-        target_tensor = torch.cat(target_list, dim=0)
+        mask_tensor = torch.cat(mask_list, dim=0)
 
-        scores = self.metric(predict_tensor, target_tensor)
+        scores = self.metric(predict_tensor, mask_tensor)
         loss_avg = float(np.stack(loss_list).mean())
         acc_avg = float(scores.mean())
         return loss_avg, acc_avg
 
-    def plot_save_logs(self, logs):
-        with open(self.exp_path / "train_logs.yaml", "w") as fp:
-            yaml.dump(logs, fp, sort_keys=False, default_flow_style=None)
-
+    def plot_logs(self, logs):
         epoch = logs["epochs"]
         train_loss = logs["train_loss"]
         train_acc = logs["train_acc"]
@@ -213,7 +244,7 @@ class SetupTrainer:
         plt.savefig(self.exp_path / "train_plot.png")
         # plt.show()
 
-    def print_train_logs(self, epoch_log):
+    def print_epoch_logs(self, epoch_log):
         epoch, dynamic_lr, train_loss, train_acc, val_loss, val_acc = epoch_log
         print(f"[Epochs-{epoch}/{self.max_epochs} | lr:{dynamic_lr}]:")
         print(f"[Train_loss:{train_loss:.4f} | Train_acc:{train_acc:.4f} | "
@@ -221,13 +252,13 @@ class SetupTrainer:
 
     def save_checkpoint(self, new_ckp_name, mode="jit"):
         if mode == "jit":
-            jit_dir = self.exp_path / "torch_jit"
+            jit_dir = self.ckp_path / "torch_jit"
             jit_dir.mkdir(parents=True, exist_ok=True)
             jit_path = str(jit_dir) + f"/{new_ckp_name}_jit.ckp"
             model_scripted = torch.jit.script(self.model)
             model_scripted.save(jit_path)
         else:
-            torch_dir = self.exp_path / "torch_original"
+            torch_dir = self.ckp_path / "torch_original"
             torch_dir.mkdir(parents=True, exist_ok=True)
             org_path = str(torch_dir) + f"/{new_ckp_name}_org.ckp"
             torch.save({"model_state_dict": self.model.state_dict(),
@@ -236,9 +267,13 @@ class SetupTrainer:
 
     def add_graph_tb(self):
         dataiter = iter(self.dataloaders["train"])
-        images, labels = next(dataiter)
+        images, masks = next(dataiter)
         images = images.to(self.device, dtype=torch.float32)
         self.writer.add_graph(self.model, images)
+
+    def dump_results(self, logs):
+        with open(self.exp_path / "train_logs.yaml", "w") as fp:
+            yaml.dump(logs, fp, sort_keys=False, default_flow_style=None)
 
     def start_train(self):
         start_time = time.time()
@@ -247,6 +282,10 @@ class SetupTrainer:
                       "train_samples": len(self.dataloaders["train"].dataset),
                       "valid_samples": len(self.dataloaders["valid"].dataset),
                       "training_time": 0,
+                      "test_samples": 0,
+                      "inference_per_img": 0,
+                      "test_iou_mean": 0,
+                      "test_dice_mean": 0,
                       "ckp_flags": [],
                       "epochs": [],
                       "dynamicLR": [],
@@ -257,8 +296,9 @@ class SetupTrainer:
                       "early_stop": []
                       }
         for epoch in range(1, self.max_epochs + 1):
-            train_avg_loss, train_avg_acc = self.epoch_runner(mode="train")
-            val_avg_loss, val_avg_acc = self.epoch_runner(mode="valid")
+            train_avg_loss, train_avg_acc = self.epoch_runner(epoch,
+                                                              mode="train")
+            val_avg_loss, val_avg_acc = self.epoch_runner(epoch, mode="valid")
             val_avg_acc_list.append(val_avg_acc)
             dynamic_lr = [group["lr"] for group in
                           self.optimizer.param_groups][0]
@@ -270,7 +310,7 @@ class SetupTrainer:
             train_logs["val_acc"].append(val_avg_acc)
             epoch_log = [epoch, dynamic_lr, train_avg_loss,
                          train_avg_acc, val_avg_loss, val_avg_acc]
-            self.print_train_logs(epoch_log)
+            self.print_epoch_logs(epoch_log)
 
             # Tensorboard tracking loss and accuracies
             if self.tensorboard:
@@ -315,12 +355,29 @@ class SetupTrainer:
         end_time = time.time() - start_time
         train_time = str(datetime.timedelta(seconds=end_time)).split('.')[0]
         train_logs["training_time"] = train_time
+
+        ckp_flag_arr = np.array(train_logs["ckp_flags"])
+
+        if len(ckp_flag_arr) > 0:
+            req_ckp_flag = int(max(ckp_flag_arr[:, 0]))
+            jit_dir = self.ckp_path / "torch_jit"
+            ckp_paths = [p for p in Path(jit_dir).rglob("*.ckp")]
+            ckp_path = [p for p in ckp_paths if f"E{req_ckp_flag}" in str(p)]
+            if len(ckp_path) > 0:
+                final_ckp_path = ckp_path[0]
+                test_results = inference(final_ckp_path, self.exp_path)
+                train_logs["test_samples"] = test_results[0]
+                train_logs["inference_per_img"] = test_results[1]
+                train_logs["test_iou_mean"] = test_results[2]
+                train_logs["test_dice_mean"] = test_results[3]
+
         # Plot and save results logs
-        self.plot_save_logs(train_logs)
-        self.add_graph_tb()
-        self.close()
+        self.plot_logs(train_logs)
+        self.dump_results(train_logs)
+        # self.add_graph_tb()
+        if self.tensorboard:
+            self.close()
 
     def close(self):
-        if self.tensorboard:
-            self.writer.flush()
-            self.writer.close()
+        self.writer.flush()
+        self.writer.close()
