@@ -38,6 +38,6 @@ pip install h5py
 
 echo "starting training .."
 
-srun python train.py --params_path "params/unet_params.yaml"
+srun python -m unet --params_path "params/unet_params.yaml"
 
 echo "Training finished!"
