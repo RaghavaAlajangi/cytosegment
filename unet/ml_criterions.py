@@ -244,10 +244,10 @@ class FocalTverskyLoss(nn.Module):
     gamma modifier from Focal Loss.
     """
 
-    def __init__(self, alpha=0.3, gamma=2):
+    def __init__(self, alpha=0.3, gamma=0.5):
         super(FocalTverskyLoss, self).__init__()
         self.alpha = alpha
-        self.gamma = 1/gamma
+        self.gamma = gamma
         self.eps = 1e-6
 
     def forward(self, predicts, targets):
