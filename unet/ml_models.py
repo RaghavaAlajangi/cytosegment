@@ -236,6 +236,9 @@ class DecodingBlock(nn.Module):
         self.conv_block = EncodingBlock(in_size, out_size,
                                         relu=relu)
 
+        self.attn_block = AttentionBlock(F_g=in_size, F_l=out_size,
+                                         F_int=out_size, relu=relu)
+
         if up_mode == "upconv":
             self.up = nn.ConvTranspose2d(in_size, out_size,
                                          kernel_size=(2, 2),
@@ -247,20 +250,17 @@ class DecodingBlock(nn.Module):
                 nn.Conv2d(in_size, out_size, kernel_size=(1, 1)),
             )
 
-        if attention:
-            self.attn_block = AttentionBlock(F_g=in_size, F_l=out_size,
-                                             F_int=out_size, relu=relu)
-
     def forward(self, prev_encode, curr_decode):
         if self.attention:
             out = self.attn_block(prev_encode, curr_decode)
+            return out
         else:
             # Decode the final layer of encoding block
             up_prev_encode = self.up(prev_encode)
             # Concat up and skip-connection layers
             x = torch.cat([curr_decode, up_prev_encode], dim=1)
             out = self.conv_block(x)
-        return out
+            return out
 
 
 class UNetTunable(nn.Module):
