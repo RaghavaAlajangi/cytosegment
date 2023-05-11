@@ -43,7 +43,7 @@ def test_unet_tunable_model():
                              depth=4, filters=3,
                              dilation=2, dropout=True,
                              up_mode='upsample',
-                             with_attn=True)
+                             attention=True)
 
     in_tensor_1 = torch.FloatTensor(2, 1, 80, 250)
     in_tensor_2 = torch.FloatTensor(4, 1, 100, 100)
