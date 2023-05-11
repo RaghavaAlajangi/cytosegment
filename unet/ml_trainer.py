@@ -25,25 +25,27 @@ def plot_valid_results(results_path, n, image_torch, target_torch,
     results_path = results_path / "valid_results"
     results_path.mkdir(parents=True, exist_ok=True)
 
-    img = image_torch.squeeze(1).detach().cpu().numpy()[0]
-    msk = target_torch.detach().cpu().numpy()[0]
-    pred = torch.sigmoid(predict_torch).squeeze(1).detach().cpu().numpy()[0]
+    img = image_torch.squeeze(1).detach().cpu().numpy()
+    msk = target_torch.squeeze(1).detach().cpu().numpy()
+    pred = torch.sigmoid(predict_torch).squeeze(1).detach().cpu().numpy()
 
-    plt.figure(figsize=(20, 4))
-    plt.subplot(131)
-    plt.title("Original image")
-    plt.imshow(img, 'gray')
-    plt.axis("off")
-    plt.subplot(132)
-    plt.title("Ground truth")
-    plt.imshow(msk[0, :, :], 'gray')
-    plt.axis("off")
-    plt.subplot(133)
-    plt.title("Prediction")
-    plt.imshow(pred, 'gray')
-    plt.axis("off")
-    plt.savefig(results_path / f"pred{n + 1}.png")
-    plt.close()
+    fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(20, 6))
+    for r, row in enumerate(ax):
+        for c, col in enumerate(row):
+            if c == 0:
+                col.imshow(img[c], 'gray')
+                col.set_title("img")
+                col.axis("off")
+            if c == 1:
+                col.imshow(msk[c], 'gray')
+                col.set_title("msk")
+                col.axis("off")
+            if c == 2:
+                col.imshow(pred[c], 'gray')
+                col.set_title("pred")
+                col.axis("off")
+    fig.savefig(results_path / f"pred{n + 1}.png")
+    plt.close(fig)
 
 
 class SetupTrainer:
