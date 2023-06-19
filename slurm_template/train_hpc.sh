@@ -1,6 +1,6 @@
 #!/bin/bash -l
-#SBATCH -o {{PATH_OUT}}/{{EXP_NAME}}/out.%j.log
-#SBATCH -e {{PATH_OUT}}/{{EXP_NAME}}/err.%j.log
+#SBATCH -o {{PATH_OUT}}/{{EXP_NAME}}/job_files/out.%j.log
+#SBATCH -e {{PATH_OUT}}/{{EXP_NAME}}/job_files/err.%j.log
 #SBATCH -D ./
 #SBATCH -J {{JOB_NAME}}
 # We need a GPU node
@@ -37,15 +37,10 @@ pip install virtualenv
 #    rm -rf venv
 #fi
 # Create and activate a new venv
-virtualenv --system-site-packages venv --python=python3.9.7
-. venv/bin/activate
+virtualenv --system-site-packages "{{EXP_NAME}}"/venv --python=python3.9.7
+. "{{EXP_NAME}}"/venv/bin/activate
 
 pip install albumentations
 pip install h5py
 
 srun python -m unet --params_path "{{PARAMS_PATH}}"
-
-# Remove existing venv
-if [ -d "venv" ]; then
-    rm -rf venv
-fi

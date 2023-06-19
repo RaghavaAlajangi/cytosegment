@@ -75,10 +75,12 @@ for n, exp_dict in enumerate(experiment_dicts):
     exp_name = get_exp_name(exp_dict)
     # Create experiment path
     exp_path = Path(path_out) / exp_name
+    job_dir = Path(path_out) / exp_name / "job_files"
     # Replace pathout with experiment path
     exp_dict["others"]["path_out"] = str(exp_path)
-    # Create folder name with experiment name
+    # Create directories
     exp_path.mkdir(parents=True, exist_ok=True)
+    job_dir.mkdir(parents=True, exist_ok=True)
     # Create experiment params and slurm job files
     slurm_path = exp_path / "job.sh"
     params_path = exp_path / "params.yaml"
@@ -101,8 +103,9 @@ for n, exp_dict in enumerate(experiment_dicts):
     with open(params_path, 'w') as file:
         yaml.dump(exp_dict, file, sort_keys=False)
 
-    slout = sp.check_output(f'sbatch {slurm_path}', shell=True)
-    for line in slout.decode().split("\n"):
-        line = line.strip().lower()
-        if line.startswith("submitted batch job"):
-            print(f"{n}) {line}")
+    # sp.run(["cd", str(Path(path_out) / exp_name)], shell=True)
+    # slout = sp.check_output(f'sbatch {slurm_path}', shell=True)
+    # for line in slout.decode().split("\n"):
+    #     line = line.strip().lower()
+    #     if line.startswith("submitted batch job"):
+    #         print(f"{n}) {line}")
