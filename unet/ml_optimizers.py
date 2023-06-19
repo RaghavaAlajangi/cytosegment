@@ -9,7 +9,7 @@ def get_optimizer_with_params(params, model):
     learn_rate = optimizer_params.get("learn_rate")
 
     if optimizer_type.lower() == "adam":
-        return Adam(model.parameters(), lr=learn_rate)
+        return Adam(model.parameters(), lr=learn_rate, eps=1e-07)
 
     if optimizer_type.lower() == "sgd":
         assert {"momentum"}.issubset(optimizer_params)
