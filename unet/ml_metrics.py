@@ -16,26 +16,48 @@ def get_metric_with_params(params):
 
 
 class DiceCoeff(nn.Module):
-    def __init__(self, smooth=1e-6, thresh=0.5):
+    def __init__(self, smooth=1e-7, thresh=0.5, sample_wise=False):
         super(DiceCoeff, self).__init__()
         self.smooth = smooth
         self.thresh = thresh
+        self.sample_wise = sample_wise
 
     def forward(self, predicts, targets):
         # Apply activation. comment out if your model contains
         # a sigmoid or equivalent activation layer
         predicts = torch.sigmoid(predicts)
 
-        # Flatten the predictions and targets
-        predicts = predicts.view(predicts.shape[0], -1) > self.thresh
-        targets = targets.view(targets.shape[0], -1) > self.thresh
+        # Sample wise metric evaluation gives different result than batch wise
+        # nearly 1.2% difference
+        if self.sample_wise:
+            # Reshape predicts and targets [B, C, W, H] --> [B, C*W*H]
+            predicts = predicts.view(predicts.shape[0], -1)
+            targets = targets.view(targets.shape[0], -1)
 
-        # Compute numerator and denominator
-        numerator = 2 * torch.logical_and(predicts, targets).sum(dim=1)
-        denominator = predicts.sum(dim=1) + targets.sum(dim=1)
-        # Add smooth to avoid 0/0
-        dice_coeff = (numerator + self.smooth) / (denominator + self.smooth)
-        return dice_coeff
+            # Apply thresholding
+            predicts = torch.where(predicts > self.thresh, 1.0, 0.0)
+            targets = torch.where(targets > self.thresh, 1.0, 0.0)
+
+            # Compute numerator and denominator
+            numerator = 2 * (predicts * targets).sum(dim=1)
+            denominator = predicts.sum(dim=1) + targets.sum(dim=1)
+
+            dice_coeff = numerator / (denominator + self.smooth)
+            return dice_coeff
+        else:
+            # Reshape predicts and targets [B, C, W, H] --> [B*C*W*H]
+            predicts = predicts.flatten()
+            targets = targets.flatten()
+
+            # Apply thresholding
+            predicts = torch.where(predicts > self.thresh, 1.0, 0.0)
+            targets = torch.where(targets > self.thresh, 1.0, 0.0)
+
+            numerator = 2 * (predicts * targets).sum()
+            denominator = predicts.sum() + targets.sum()
+
+            dice_coeff = numerator / (denominator + self.smooth)
+            return dice_coeff
 
 
 class IoUCoeff(nn.Module):
@@ -49,8 +71,8 @@ class IoUCoeff(nn.Module):
         # a sigmoid or equivalent activation layer
         predicts = torch.sigmoid(predicts)
         # Flatten and binarize the predictions and targets
-        predicts = predicts.view(predicts.shape[0], -1) > self.thresh
-        targets = targets.view(targets.shape[0], -1) > self.thresh
+        predicts = predicts.view(predicts.shape[0], -1) >= self.thresh
+        targets = targets.view(targets.shape[0], -1) >= self.thresh
 
         # Compute intersection and union
         intersection = torch.logical_and(predicts, targets).sum(dim=1)
