@@ -36,7 +36,7 @@ def create_params_combinations(original_dict):
     Parameters
     ----------
     original_dict
-        Generate all possible combinations of the values in each nested dictionary
+        Nested dictionary with params
     Returns
     -------
     A list of dictionaries
@@ -95,4 +95,5 @@ for n, exp_dict in enumerate(experiment_dicts):
 
     slout = sp.check_output(f'sbatch {slurm_path}', shell=True)
     for line in slout.decode().split("\n"):
-        print(f"{n}) Job {line}")
+        if line.startswith("submitted batch job"):
+            print(f"{n}) {line}")
