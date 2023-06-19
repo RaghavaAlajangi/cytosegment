@@ -17,17 +17,18 @@ unet.egg-info
 .env
 .coverage
 
-tests/data/rtdc_ds_with_img_bg_ml_scores.zip
-tests/test_cli.py
+# data
+training_testing_set_w_beads
+training_testing_set_w_beads_mirrored.zip
+
 
 # Experiment dir
 experiments
-hyper_tuning_1
-hyper_tuning_2
-hyper_tuning_3
-hpc_results
+experiments_old
 
 # Test scripts
 test.py
 testing.py
 unet/new_unet.py
+tests/data/rtdc_ds_with_img_bg_ml_scores.zip
+tests/test_cli.py
