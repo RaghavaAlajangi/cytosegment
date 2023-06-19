@@ -18,6 +18,7 @@ model:
   weight_init: [HeNormal]  # "default",  "xavier", "HeNormal", "HeUniform", "orthogonal"
 
 dataset:
+  type: [PNG]
   data_path: [data/training_testing_set_w_beads.zip]
   # "min_max" = True: minimum and maximum pixel values of each image will be
   # used to normalize the dataset. Otherwise, 255 will be used to divide each
