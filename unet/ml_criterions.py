@@ -169,7 +169,7 @@ class FocalLoss(nn.Module):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
-        self.eps = 1e-6
+        self.eps = 1e-10
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -244,11 +244,11 @@ class FocalTverskyLoss(nn.Module):
     gamma modifier from Focal Loss.
     """
 
-    def __init__(self, alpha=0.3, gamma=0.5):
+    def __init__(self, alpha=0.3, gamma=2):
         super(FocalTverskyLoss, self).__init__()
         self.alpha = alpha
-        self.gamma = gamma
-        self.eps = 1e-6
+        self.gamma = 1/gamma
+        self.eps = 1e-7
 
     def forward(self, predicts, targets):
         # comment out if your model contains a sigmoid or equivalent
@@ -256,13 +256,16 @@ class FocalTverskyLoss(nn.Module):
         predicts = torch.sigmoid(predicts)
 
         # flatten label and prediction tensors
-        predicts = predicts.view(-1)
-        targets = targets.view(-1)
+        # predicts = predicts.view(-1)
+        # targets = targets.view(-1)
+
+        predicts = predicts.flatten()
+        targets = targets.flatten()
 
         # True Positives, False Positives & False Negatives
         TP = (predicts * targets).sum()
-        FP = ((1 - targets) * predicts).sum()
-        FN = (targets * (1 - predicts)).sum()
+        FN = ((1 - targets) * predicts).sum()
+        FP = (targets * (1 - predicts)).sum()
         tversky = (TP + self.eps) / (self.eps + TP + self.alpha * FP +
                                      (1 - self.alpha) * FN)
         focal_tversky = (1 - tversky) ** self.gamma
