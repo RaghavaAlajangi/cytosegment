@@ -103,9 +103,9 @@ for n, exp_dict in enumerate(experiment_dicts):
     with open(params_path, 'w') as file:
         yaml.dump(exp_dict, file, sort_keys=False)
 
-    # sp.run(["cd", str(Path(path_out) / exp_name)], shell=True)
-    # slout = sp.check_output(f'sbatch {slurm_path}', shell=True)
-    # for line in slout.decode().split("\n"):
-    #     line = line.strip().lower()
-    #     if line.startswith("submitted batch job"):
-    #         print(f"{n}) {line}")
+    sp.run(["cd", str(Path(path_out) / exp_name)], shell=True)
+    slout = sp.check_output(f'sbatch {slurm_path}', shell=True)
+    for line in slout.decode().split("\n"):
+        line = line.strip().lower()
+        if line.startswith("submitted batch job"):
+            print(f"{n}) {line}")
