@@ -67,7 +67,7 @@ params = yaml.safe_load(open(params_path))
 slurm_file = bash_path.read_text()
 experiment_dicts = create_params_combinations(params)
 
-for exp_dict in experiment_dicts:
+for n, exp_dict in enumerate(experiment_dicts):
     path_out = params["others"]["path_out"][0]
     exp_name = get_exp_name(exp_dict)
     exp_path = Path(path_out) / exp_name
@@ -93,7 +93,6 @@ for exp_dict in experiment_dicts:
         exp_dict["others"]["path_out"] = str(exp_path)
         yaml.dump(exp_dict, file, sort_keys=False)
 
-    ret = sp.check_output(f'sbatch {slurm_path}', shell=True)
-    print(f"Job {ret} has been submitted!")
-
-
+    slout = sp.check_output(f'sbatch {slurm_path}', shell=True)
+    for line in slout.decode().split("\n"):
+        print(f"{n}) Job {line}")
