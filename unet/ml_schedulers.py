@@ -18,6 +18,6 @@ def get_scheduler_with_params(params, optimizer):
 
     if scheduler_type.lower() == "reducelronplateau":
         return lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
-                                              mode="max",
+                                              mode="min",
                                               patience=patience,
                                               factor=lr_decay_rate)
