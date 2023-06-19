@@ -9,12 +9,30 @@ def get_model_with_params(params):
     model_params = params.get("model")
     assert {"type"}.issubset(model_params)
     model_type = model_params.get("type")
+    assert {"weight_init"}.issubset(model_params)
+    weight_init = model_params.get("weight_init")
+
+    if model_type.lower() == "benchunet":
+        assert {"in_channels", "out_classes"}.issubset(model_params)
+        model = BenchUNet(in_channels=model_params.get("in_channels"),
+                          out_classes=model_params.get("out_classes"))
+
+        if weight_init.lower() == "default":
+            return model
+        else:
+            return init_weights(model, init_type=weight_init)
+
     if model_type.lower() == "unet":
         assert {"in_channels", "out_classes"}.issubset(model_params)
         assert {"bilinear"}.issubset(model_params)
-        return UNet(in_channels=model_params.get("in_channels"),
-                    out_classes=model_params.get("out_classes"),
-                    bilinear=model_params.get("bilinear"))
+        model = UNet(in_channels=model_params.get("in_channels"),
+                     out_classes=model_params.get("out_classes"),
+                     bilinear=model_params.get("bilinear"))
+
+        if weight_init.lower() == "default":
+            return model
+        else:
+            return init_weights(model, init_type=weight_init)
 
     if model_type.lower() == "unettunable":
         assert {"in_channels", "out_classes"}.issubset(model_params)
@@ -22,19 +40,128 @@ def get_model_with_params(params):
         assert {"dilation", "dropout"}.issubset(model_params)
         assert {"up_mode", "attention"}.issubset(model_params)
         assert {"relu"}.issubset(model_params)
-        return UNetTunable(in_channels=model_params.get("in_channels"),
-                           out_classes=model_params.get("out_classes"),
-                           depth=model_params.get("depth"),
-                           filters=model_params.get("filters"),
-                           dilation=model_params.get("dilation"),
-                           dropout=model_params.get("dropout"),
-                           up_mode=model_params.get("up_mode"),
-                           attention=model_params.get("attention"),
-                           relu=model_params.get("relu"))
+        model = UNetTunable(in_channels=model_params.get("in_channels"),
+                            out_classes=model_params.get("out_classes"),
+                            depth=model_params.get("depth"),
+                            filters=model_params.get("filters"),
+                            dilation=model_params.get("dilation"),
+                            dropout=model_params.get("dropout"),
+                            up_mode=model_params.get("up_mode"),
+                            attention=model_params.get("attention"),
+                            relu=model_params.get("relu"))
+        if weight_init.lower() == "default":
+            return model
+        else:
+            return init_weights(model, init_type=weight_init)
+
+
+def init_weights(net, init_type="HeNormal", gain=0.02):
+    """
+    Initializes the weights of a network.
+    Parameters
+    ----------
+    net
+        Pass the network to be initialized
+    init_type
+        Specify the type of initialization to be used
+    gain
+        Scale the weights of the network
+    Returns
+    -------
+    The initialized network
+    """
+    def init_func(m):
+        classname = m.__class__.__name__
+        if hasattr(m, "weight") and (classname.find("Conv") != -1):
+            if init_type == "normal":
+                init.normal_(m.weight.data, 0.0, gain)
+            elif init_type == "xavier":
+                init.xavier_normal_(m.weight.data, gain=gain)
+            elif init_type == "HeNormal":
+                init.kaiming_normal_(m.weight.data, mode="fan_in",
+                                     nonlinearity="relu")
+            elif init_type == "HeUniform":
+                init.kaiming_uniform_(m.weight.data, mode="fan_in",
+                                      nonlinearity="relu")
+            elif init_type == "orthogonal":
+                init.orthogonal_(m.weight.data, gain=gain)
+            else:
+                raise NotImplementedError(
+                    "initialization method [%s] is not implemented" % init_type)
+            if hasattr(m, "bias") and m.bias is not None:
+                init.constant_(m.bias.data, 0.0)
+        elif classname.find("BatchNorm2d") != -1:
+            init.normal_(m.weight.data, 1.0, gain)
+            init.constant_(m.bias.data, 0.0)
+
+    print(f"Initialize network with {init_type}")
+    return net.apply(init_func)
+
+
+class Block(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3),
+                      padding=1),
+            nn.BatchNorm2d(out_channels),
+            # nn.LeakyReLU(0.1, inplace=True),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        return self.block(x)
+
+
+class ConcatUp(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.up = nn.ConvTranspose2d(in_channels, in_channels // 2,
+                                     kernel_size=(3, 3), stride=(2, 2),
+                                     padding=1, output_padding=1)
+        self.block = Block(in_channels, out_channels)
+
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+        x_cat = torch.cat([x2, x1], dim=1)
+        x = self.block(x_cat)
+        return x
+
+
+class BenchUNet(nn.Module):
+    def __init__(self, in_channels, out_classes):
+        super(BenchUNet, self).__init__()
+        self.n_channels = in_channels
+        self.n_classes = out_classes
+
+        self.max_pool = nn.MaxPool2d(2)
+
+        self.block1 = Block(in_channels, 8)
+        self.block2 = Block(8, 16)
+        self.block3 = Block(16, 32)
+        self.block4 = Block(32, 64)
+        self.up1 = ConcatUp(64, 32)
+        self.up2 = ConcatUp(32, 16)
+        self.up3 = ConcatUp(16, 8)
+        self.outc = nn.Conv2d(8, out_classes, kernel_size=(1, 1))
+
+    def forward(self, x):
+        x1 = self.block1(x)
+        xm1 = self.max_pool(x1)
+        x2 = self.block2(xm1)
+        xm2 = self.max_pool(x2)
+        x3 = self.block3(xm2)
+        xm3 = self.max_pool(x3)
+        x4 = self.block4(xm3)
+        x = self.up1(x4, x3)
+        x = self.up2(x, x2)
+        x = self.up3(x, x1)
+        logits = self.outc(x)
+        return logits
 
 
 class DoubleConv(nn.Module):
-    """(convolution => [BN] => ReLU) * 2"""
+    """(CNN => BN => ReLU) * 2"""
 
     def __init__(self, in_channels, out_channels, mid_channels=None):
         super().__init__()
@@ -152,8 +279,6 @@ class AttentionBlock(nn.Module):
     def __init__(self, F_g, F_l, F_int, relu=True):
         super(AttentionBlock, self).__init__()
 
-        # init.normal_(self.conv.weight, mean=0, std=0.01)
-
         self.W_g = nn.Sequential(
             nn.Conv2d(F_g, F_int, kernel_size=(1, 1), stride=(1, 1),
                       padding=0, bias=True),
@@ -161,7 +286,7 @@ class AttentionBlock(nn.Module):
         )
 
         self.W_x = nn.Sequential(
-            nn.Conv2d(F_l, F_int, kernel_size=(1, 1), stride=(2, 2),
+            nn.Conv2d(F_l, F_int, kernel_size=(1, 1), stride=(1, 1),
                       padding=0, bias=True),
             nn.BatchNorm2d(F_int)
         )
@@ -172,6 +297,10 @@ class AttentionBlock(nn.Module):
             nn.BatchNorm2d(1),
             nn.Sigmoid()
         )
+        # # Apply weight initialization
+        # weight_init(self.W_g)
+        # weight_init(self.W_x)
+        # weight_init(self.psi)
 
         # Select the activation function
         if relu:
@@ -187,11 +316,13 @@ class AttentionBlock(nn.Module):
         x1 = self.W_x(x)
         psi = self.activation(g1 + x1)
         psi = self.psi(psi)
-        up_samp = self.up(psi)
-        return x * up_samp
+        # up_samp = self.up(psi)
+        return x * psi
 
 
 class EncodingBlock(nn.Module):
+    """(CNN => BN => ReLU) * 2"""
+
     def __init__(self, in_size, out_size, dilation=1, dropout=0,
                  relu=True):
         super(EncodingBlock, self).__init__()
@@ -236,13 +367,15 @@ class DecodingBlock(nn.Module):
         self.conv_block = EncodingBlock(in_size, out_size,
                                         relu=relu)
 
-        self.attn_block = AttentionBlock(F_g=in_size, F_l=out_size,
-                                         F_int=out_size, relu=relu)
+        self.attn_block = AttentionBlock(F_g=out_size, F_l=out_size,
+                                         F_int=out_size // 2, relu=relu)
 
         if up_mode == "upconv":
-            self.up = nn.ConvTranspose2d(in_size, out_size,
-                                         kernel_size=(2, 2),
-                                         stride=(2, 2))
+            self.up = nn.Sequential(
+                nn.ConvTranspose2d(in_size, out_size,
+                                   kernel_size=(2, 2),
+                                   stride=(2, 2))
+            )
         elif up_mode == "upsample":
             self.up = nn.Sequential(
                 nn.Upsample(mode="bilinear", scale_factor=2,
@@ -251,12 +384,15 @@ class DecodingBlock(nn.Module):
             )
 
     def forward(self, prev_encode, curr_decode):
+        up_prev_encode = self.up(prev_encode)
         if self.attention:
-            out = self.attn_block(prev_encode, curr_decode)
+            atten_out = self.attn_block(up_prev_encode, curr_decode)
+            cat_out = torch.cat((atten_out, up_prev_encode), dim=1)
+            out = self.conv_block(cat_out)
             return out
         else:
             # Decode the final layer of encoding block
-            up_prev_encode = self.up(prev_encode)
+            # up_prev_encode = self.up(prev_encode)
             # Concat up and skip-connection layers
             x = torch.cat([curr_decode, up_prev_encode], dim=1)
             out = self.conv_block(x)
