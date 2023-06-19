@@ -72,6 +72,7 @@ scheduler:
 others:
   max_epochs: [200]
   use_cuda: [True]
+  path_out: ["experiments"]
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'
@@ -93,6 +94,6 @@ others:
 
 hpc_params:
   mail_id: raghava.alajangi@mpl.mpg.de
-  max_mem: 5
-  max_time: 2
+  max_mem_GB: 5
+  max_time_hours: 2
 

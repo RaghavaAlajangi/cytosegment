@@ -29,6 +29,18 @@ def get_exp_name(params):
 
 
 def create_params_combinations(original_dict):
+    """
+    The function takes a dictionary of dictionaries as input and then generates
+    all possible combinations of the values in each nested dictionary.
+    For example, if we have the following input:
+    Parameters
+    ----------
+    original_dict
+        Generate all possible combinations of the values in each nested dictionary
+    Returns
+    -------
+    A list of dictionaries
+    """
     dict_combinations = []
     # Generate all possible combinations of the values in
     # each nested dictionary
@@ -62,13 +74,14 @@ for exp_dict in experiment_dicts:
     exp_path.mkdir(parents=True, exist_ok=True)
     slurm_path = exp_path / "job.sh"
     params_path = exp_path / "params.yaml"
+    hpc_params = params["hpc_params"]
     hpc_job_dict = {
         "EXP_NAME": exp_name,
         "PATH_OUT": path_out,
         "JOB_NAME": exp_name,
-        "MAIL_ID": params["hpc_params"]["mail_id"],
-        "MAX_MEM": params["hpc_params"]["max_mem"],
-        "MAX_TIME": params["hpc_params"]["max_time"],
+        "MAIL_ID": hpc_params["mail_id"],
+        "MAX_MEM": f"{hpc_params['max_mem_GB']:.0f}G",
+        "MAX_TIME": f"{int(hpc_params['max_time_hours: 2']):02d}:00:00",
         "PARAMS_PATH": params_path
     }
     for k, v in hpc_job_dict.items():
@@ -81,4 +94,6 @@ for exp_dict in experiment_dicts:
         yaml.dump(exp_dict, file, sort_keys=False)
 
     ret = sp.check_output(f'sbatch {slurm_path}', shell=True)
+    print(f"Job {ret} has been submitted!")
+
 
