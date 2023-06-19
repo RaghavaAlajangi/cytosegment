@@ -64,14 +64,22 @@ def create_params_combinations(original_dict):
 
 
 params = yaml.safe_load(open(params_path))
-slurm_file = bash_path.read_text()
 experiment_dicts = create_params_combinations(params)
 
 for n, exp_dict in enumerate(experiment_dicts):
-    path_out = params["others"]["path_out"][0]
+    # Read the slurm job template
+    slurm_file = bash_path.read_text()
+    # Get the pathout from the params dict
+    path_out = exp_dict["others"]["path_out"]
+    # Create experiment name using params dict
     exp_name = get_exp_name(exp_dict)
+    # Create experiment path
     exp_path = Path(path_out) / exp_name
+    # Replace pathout with experiment path
+    exp_dict["others"]["path_out"] = str(exp_path)
+    # Create folder name with experiment name
     exp_path.mkdir(parents=True, exist_ok=True)
+    # Create experiment params and slurm job files
     slurm_path = exp_path / "job.sh"
     params_path = exp_path / "params.yaml"
     hpc_params = params["hpc_params"]
@@ -84,16 +92,17 @@ for n, exp_dict in enumerate(experiment_dicts):
         "MAX_TIME": f"{int(hpc_params['max_time_hours']):02d}:00:00",
         "PARAMS_PATH": params_path
     }
+    # Update and save slurm job file
     for k, v in hpc_job_dict.items():
         slurm_file = slurm_file.replace("{{" + k + "}}", str(v))
     slurm_path.write_text(slurm_file)
 
+    # Save experiment yaml file
     with open(params_path, 'w') as file:
-        # Update path_out in params.yaml with experiment name
-        exp_dict["others"]["path_out"] = str(exp_path)
         yaml.dump(exp_dict, file, sort_keys=False)
 
     slout = sp.check_output(f'sbatch {slurm_path}', shell=True)
     for line in slout.decode().split("\n"):
+        line = line.strip().lower()
         if line.startswith("submitted batch job"):
             print(f"{n}) {line}")
