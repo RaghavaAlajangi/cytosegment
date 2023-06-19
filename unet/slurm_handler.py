@@ -81,7 +81,7 @@ for exp_dict in experiment_dicts:
         "JOB_NAME": exp_name,
         "MAIL_ID": hpc_params["mail_id"],
         "MAX_MEM": f"{hpc_params['max_mem_GB']:.0f}G",
-        "MAX_TIME": f"{int(hpc_params['max_time_hours: 2']):02d}:00:00",
+        "MAX_TIME": f"{int(hpc_params['max_time_hours']):02d}:00:00",
         "PARAMS_PATH": params_path
     }
     for k, v in hpc_job_dict.items():
