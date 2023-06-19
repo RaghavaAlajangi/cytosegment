@@ -37,10 +37,10 @@ pip install virtualenv
 #    rm -rf venv
 #fi
 # Create and activate a new venv
-virtualenv --system-site-packages "{{EXP_NAME}}"/venv --python=python3.9.7
-. "{{EXP_NAME}}"/venv/bin/activate
+virtualenv --system-site-packages {{PATH_OUT}}/{{EXP_NAME}}/venv --python=python3.9.7
+. {{PATH_OUT}}/{{EXP_NAME}}/venv/bin/activate
 
 pip install albumentations
 pip install h5py
 
-srun python -m unet --params_path "{{PARAMS_PATH}}"
+srun python -m unet --params_path {{PARAMS_PATH}}

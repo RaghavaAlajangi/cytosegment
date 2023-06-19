@@ -26,7 +26,7 @@ dataset:
   min_max: [False]
   augmentation: [False]
   valid_size: [0.15]
-  batch_size: [8]
+  batch_size: [8,16,32]
 
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
@@ -42,7 +42,7 @@ dataset:
   random_seed: [42]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
-  num_workers: [8]
+  num_workers: [8,16,32]
 
 criterion:
   type: ["FocalTverskyLoss"]
