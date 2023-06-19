@@ -2,6 +2,10 @@
 
 In this repository, the UNet model (semantic segmentation) data preparation and training code are stored.
 
+```bash
+python -m unet --params_path params/unet_params.yaml
+```
+
 ## Installation
 
 1. Install git lfs to clone the model checkpoints:  

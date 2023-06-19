@@ -2,7 +2,6 @@
 venv/
 
 # Training data
-TEST_DATA/
 all_data/
 htmlcov
 
