@@ -1,4 +1,5 @@
-import datetime
+import csv
+from datetime import datetime, timedelta
 from pathlib import Path
 import time
 
@@ -18,6 +19,10 @@ from .ml_models import get_model_with_params
 from .ml_optimizers import get_optimizer_with_params
 from .ml_schedulers import get_scheduler_with_params
 from .ml_inferece import inference
+from .utils import summary
+
+save_valid_results = True
+save_test_results = True
 
 
 def plot_valid_results(results_path, n, image_torch, target_torch,
@@ -33,18 +38,18 @@ def plot_valid_results(results_path, n, image_torch, target_torch,
     for r, row in enumerate(ax):
         for c, col in enumerate(row):
             if c == 0:
-                col.imshow(img[c], 'gray')
+                col.imshow(img[r], 'gray')
                 col.set_title("img")
                 col.axis("off")
             if c == 1:
-                col.imshow(msk[c], 'gray')
+                col.imshow(msk[r], 'gray')
                 col.set_title("msk")
                 col.axis("off")
             if c == 2:
-                col.imshow(pred[c], 'gray')
+                col.imshow(pred[r], 'gray')
                 col.set_title("pred")
                 col.axis("off")
-    fig.savefig(results_path / f"pred{n + 1}.png")
+    fig.savefig(results_path / f"pred_at_epoch_{n}.png")
     plt.close(fig)
 
 
@@ -85,14 +90,6 @@ class SetupTrainer:
             self.criterion = criterion.cuda()
             # self.model = DataParallel(model)
 
-        # Print and save No of model parameters in the result logs
-        trainable_params = sum(
-            p.numel() for p in self.model.parameters() if p.requires_grad
-        )
-
-        self.model_params = trainable_params
-        print(f"Trainable parameters in the model:{self.model_params}")
-
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
 
@@ -100,7 +97,7 @@ class SetupTrainer:
             self.exp_path = Path(path_out)
         else:
             # Create a folder to store experiment results
-            time_now = datetime.datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
+            time_now = datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
             self.exp_path = Path(path_out) / time_now
             self.exp_path.mkdir(parents=True, exist_ok=True)
 
@@ -114,6 +111,10 @@ class SetupTrainer:
             tb_path = str(self.exp_path.parents[0] / "tensorboard")
             run_name = str(self.exp_path.name)
             self.writer = SummaryWriter(log_dir=tb_path + f"/{run_name}")
+
+        self.dump_model_summary()
+        print(f"Training samples: {len(self.dataloaders['train'].dataset)}")
+        print(f"Validation samples: {len(self.dataloaders['valid'].dataset)}")
 
     @classmethod
     def with_params(cls, params):
@@ -134,9 +135,10 @@ class SetupTrainer:
         path_out = other_params.get("path_out")
         init_from_ckp = other_params.get("init_from_ckp")
         tensorboard = other_params.get("tensorboard")
+        # save_infe_res = other_params.get("save_inference_results")
 
         # Create a folder to store experiment results based on current time
-        time_now = datetime.datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
+        time_now = datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
         exp_path = Path(path_out) / time_now
         exp_path.mkdir(parents=True, exist_ok=True)
 
@@ -157,6 +159,19 @@ class SetupTrainer:
         for param in self.model.features.parameters():
             param.requires_grad = False
 
+    def dump_model_summary(self):
+        images, masks = next(iter(self.dataloaders["train"]))
+        result, params_info = summary(self.model, tuple(images[0].shape))
+        print(f"Total parameters in the model:{params_info[0]}")
+        print(f"Trainable parameters in the model:{params_info[1]}")
+        lines = result.split("\n")
+
+        # Open the CSV file in write mode
+        with open(self.exp_path / "model_summary.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            for line in lines:
+                writer.writerow([line])
+
     def epoch_runner(self, epoch, mode):
         if mode.lower() == 'train':
             self.model.train()
@@ -165,8 +180,20 @@ class SetupTrainer:
         loss_list = []
         predict_list = []
         mask_list = []
+
+        bscore = []
         # Get batch of images and labels iteratively
-        for images, masks in self.dataloaders[mode]:
+        for n, (images, masks) in enumerate(self.dataloaders[mode]):
+            # Handling concatination of original and flipped images
+            # images = images.view(-1, images.shape[2], images.shape[3])
+            # images = images.unsqueeze(1)
+            # masks = masks.view(-1, masks.shape[2], masks.shape[3])
+            #
+            # idx = torch.randperm(images.shape[0])
+            # images = images.index_select(0, idx)
+            # masks = masks.index_select(0, idx)
+
+            # Pass the data to the device
             images = images.to(self.device, dtype=torch.float32)
             masks = masks.to(self.device, dtype=torch.float32)
             # Zero the parameter gradients
@@ -185,23 +212,29 @@ class SetupTrainer:
                 del loss  # this may be the fix for my OOM error
                 loss_list.append(loss_item)
 
-                predict_list.append(predicts)
-                mask_list.append(masks)
+                # predict_list.append(predicts)
+                # mask_list.append(masks)
 
-                if mode.lower() == "valid":
-                    plot_valid_results(self.exp_path, epoch, images,
-                                       masks, predicts)
+                bwise_scores = self.metric(predicts, masks)
+                bscore.append(bwise_scores.cpu())
 
-        predict_tensor = torch.cat(predict_list, dim=0)
-        mask_tensor = torch.cat(mask_list, dim=0)
+                if save_valid_results:
+                    if mode.lower() == "valid" and n == 5:
+                        plot_valid_results(self.exp_path, epoch, images,
+                                           masks, predicts)
 
-        scores = self.metric(predict_tensor, mask_tensor)
+        # predict_tensor = torch.cat(predict_list, dim=0)
+        # mask_tensor = torch.cat(mask_list, dim=0)
+        # scores = self.metric(predict_tensor, mask_tensor)
+        # acc_avg = float(scores.mean())
+
         loss_avg = float(np.stack(loss_list).mean())
-        acc_avg = float(scores.mean())
+        acc_avg = float(torch.mean(torch.stack(bscore)))
+
         return loss_avg, acc_avg
 
     def plot_logs(self, logs):
-        epoch = logs["epochs"]
+        epoch = np.arange(1, logs["epochs"] + 1)
         train_loss = logs["train_loss"]
         train_acc = logs["train_acc"]
         val_loss = logs["val_loss"]
@@ -244,7 +277,6 @@ class SetupTrainer:
         plt.ylim(-0.01, 0.5)
         plt.grid()
         plt.savefig(self.exp_path / "train_plot.png")
-        # plt.show()
 
     def print_epoch_logs(self, epoch_log):
         epoch, dynamic_lr, train_loss, train_acc, val_loss, val_acc = epoch_log
@@ -277,26 +309,35 @@ class SetupTrainer:
         with open(self.exp_path / "train_logs.yaml", "w") as fp:
             yaml.dump(logs, fp, sort_keys=False, default_flow_style=None)
 
+    def dump_test_scores(self, scores):
+        score_dict = {"iou_scores": scores[2],
+                      "dice_scores": scores[3]}
+        with open(self.exp_path / "test_scores.csv", "w", newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(score_dict.keys())
+            writer.writerows(zip(*score_dict.values()))
+
     def start_train(self):
         start_time = time.time()
         val_avg_acc_list = []
-        train_logs = {"model_params": self.model_params,
-                      "train_samples": len(self.dataloaders["train"].dataset),
-                      "valid_samples": len(self.dataloaders["valid"].dataset),
-                      "training_time": 0,
-                      "test_samples": 0,
-                      "inference_per_img": 0,
-                      "test_iou_mean": 0,
-                      "test_dice_mean": 0,
-                      "ckp_flags": [],
-                      "epochs": [],
-                      "dynamicLR": [],
-                      "train_loss": [],
-                      "train_acc": [],
-                      "val_loss": [],
-                      "val_acc": [],
-                      "early_stop": []
-                      }
+        train_logs = {
+            "train_samples": len(self.dataloaders["train"].dataset),
+            "valid_samples": len(self.dataloaders["valid"].dataset),
+            "training_time": 0,
+            "test_samples": 0,
+            "inference_gpu": 0,
+            "inference_cpu": 0,
+            "test_iou_mean": 0,
+            "test_dice_mean": 0,
+            "epochs": 0,
+            "ckp_flags": [],
+            "val_acc": [],
+            "train_acc": [],
+            "val_loss": [],
+            "train_loss": [],
+            "dynamicLR": [],
+            "early_stop": []
+        }
         for epoch in range(1, self.max_epochs + 1):
             train_avg_loss, train_avg_acc = self.epoch_runner(epoch,
                                                               mode="train")
@@ -304,7 +345,7 @@ class SetupTrainer:
             val_avg_acc_list.append(val_avg_acc)
             dynamic_lr = [group["lr"] for group in
                           self.optimizer.param_groups][0]
-            train_logs["epochs"].append(epoch)
+            train_logs["epochs"] = self.max_epochs
             train_logs["dynamicLR"].append(dynamic_lr)
             train_logs["train_loss"].append(train_avg_loss)
             train_logs["train_acc"].append(train_avg_acc)
@@ -325,10 +366,6 @@ class SetupTrainer:
                                          "Valid": val_avg_acc},
                                         epoch)
 
-                # self.writer.add_hparams({'lr': 0.1 * i, 'bsize': i},
-                #                         {'hparam/accuracy': 10 * i,
-                #                          'hparam/loss': 10 * i})
-
             if val_avg_acc > self.min_ckp_acc and val_avg_acc == max(
                     val_avg_acc_list):
                 new_ckp_name = f"/E{epoch}_trainAcc_" \
@@ -343,7 +380,7 @@ class SetupTrainer:
             if self.scheduler and isinstance(self.scheduler, StepLR):
                 self.scheduler.step()
             else:
-                self.scheduler.step(val_avg_acc)
+                self.scheduler.step(val_avg_loss)
 
             # Track early stopping patience if it is specified
             if hasattr(self, "early_stop"):
@@ -355,7 +392,9 @@ class SetupTrainer:
                     break
         # Calculate training time and save it in results logs
         end_time = time.time() - start_time
-        train_time = str(datetime.timedelta(seconds=end_time)).split('.')[0]
+        train_time = str(timedelta(seconds=end_time)).split('.')[0]
+        print("=" * 80)
+        print(f"Total training time: {train_time}")
         train_logs["training_time"] = train_time
 
         ckp_flag_arr = np.array(train_logs["ckp_flags"])
@@ -367,11 +406,18 @@ class SetupTrainer:
             ckp_path = [p for p in ckp_paths if f"E{req_ckp_flag}" in str(p)]
             if len(ckp_path) > 0:
                 final_ckp_path = ckp_path[0]
-                test_results = inference(final_ckp_path, self.exp_path)
+                test_results = inference(final_ckp_path, self.ckp_path,
+                                         min_max=False, use_cuda=True,
+                                         save_results=save_test_results)
                 train_logs["test_samples"] = test_results[0]
-                train_logs["inference_per_img"] = test_results[1]
-                train_logs["test_iou_mean"] = test_results[2]
-                train_logs["test_dice_mean"] = test_results[3]
+                train_logs["inference_gpu"] = test_results[1]
+                train_logs["test_iou_mean"] = float(test_results[2].mean())
+                train_logs["test_dice_mean"] = float(test_results[3].mean())
+                self.dump_test_scores(test_results)
+                test_results = inference(final_ckp_path, self.ckp_path,
+                                         min_max=False, use_cuda=False,
+                                         save_results=False)
+                train_logs["inference_cpu"] = test_results[1]
 
         # Plot and save results logs
         self.plot_logs(train_logs)
@@ -379,6 +425,10 @@ class SetupTrainer:
         # self.add_graph_tb()
         if self.tensorboard:
             self.close()
+
+        # Reset the memory by deleting model and cache
+        del self.model
+        torch.cuda.empty_cache()
 
     def close(self):
         self.writer.flush()
