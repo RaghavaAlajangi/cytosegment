@@ -1,21 +1,21 @@
-#model:
-#  type: ["UNetTunable"]
-#  in_channels: [1]
-#  out_classes: [1]
-#  depth: [4]
-#  filters: [3]
-#  dilation: [1]
-#  dropout: [0.2]
-#  up_mode: ["upconv"]
-#  attention: [True]
-#  relu: [True]
-#  weight_init: [default]
-
 model:
-  type: ["BenchUNet"]
+  type: [UNetTunable]
   in_channels: [1]
   out_classes: [1]
-  weight_init: [HeNormal]  # "default",  "xavier", "HeNormal", "HeUniform", "orthogonal"
+  depth: [4]
+  filters: [3]
+  dilation: [1]
+  dropout: [0.1]
+  up_mode: [upconv]
+  attention: [False]
+  relu: [True]
+  weight_init: [HeNormal]
+
+#model:
+#  type: ["BenchUNet"]
+#  in_channels: [1]
+#  out_classes: [1]
+#  weight_init: [HeNormal]  # "default",  "xavier", "HeNormal", "HeUniform", "orthogonal"
 
 dataset:
   type: [PNG]
@@ -45,17 +45,17 @@ dataset:
   num_workers: [8]
 
 criterion:
-  type: ["FocalTverskyLoss"]
-  alpha: [0.3] # weightage: alpha --> FP, (1-alpha) --> FN
-  gamma: [2]
+  type: [FocalTverskyLoss]
+  alpha: [0.5] # weightage: alpha --> FP, (1-alpha) --> FN
+  gamma: [1.3]
 
 metric:
-  type: ["DiceCoeff"]
-#  type: ["IouCoeff"]
+  type: [DiceCoeff]
+#  type: [IouCoeff]
 
 
 optimizer:
-  type: ["Adam"]
+  type: [Adam]
   learn_rate: [0.01]
 
 # Decays the learning rate by ``lr_decay_rate`` every ``patience``
@@ -66,18 +66,18 @@ optimizer:
 # NOTE: instead of using step based scheduler, the ReduceLROnPlateau
 # scheduler could be more effective to get optimal results.
 scheduler:
-  type: ["ReduceLROnPlateau"]
+  type: [ReduceLROnPlateau]
   patience: [10]
   lr_decay_rate: [0.5] # Ex: after 5 epochs lr becomes 0.01*0.1 = 0.001
 
 others:
   max_epochs: [200]
   use_cuda: [True]
-  path_out: ["experiments"]
+  path_out: [experiments]
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'
-  min_ckp_acc: [0.96]
+  min_ckp_acc: [0.97]
 
   # If the model metric (validation loss) starts increasing,
   # 'early stopping' will count the n consequent epochs (patience).
@@ -96,5 +96,5 @@ others:
 hpc_params:
   mail_id: raghava.alajangi@mpl.mpg.de
   max_mem_GB: 5
-  max_time_hours: 2
+  max_time_hours: 1
 
