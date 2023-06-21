@@ -23,7 +23,7 @@
 #SBATCH --mail-type=all
 #SBATCH --mail-user={{MAIL_ID}}
 
-
+# Import modules
 module purge
 module load anaconda/3/2021.11
 module load cuda/11.2
@@ -31,11 +31,6 @@ module load cuda/11.2
 module load pytorch/gpu-cuda-11.2/1.9.0
 
 pip install virtualenv
-
-## Remove existing venv (if it exists)
-#if [ -d "venv" ]; then
-#    rm -rf venv
-#fi
 # Create and activate a new venv
 virtualenv --system-site-packages {{PATH_OUT}}/{{EXP_NAME}}/venv --python=python3.9.7
 . {{PATH_OUT}}/{{EXP_NAME}}/venv/bin/activate
@@ -44,3 +39,8 @@ pip install albumentations
 pip install h5py
 
 srun python -m unet --params_path {{PARAMS_PATH}}
+
+# Remove existing venv
+if [ -d "{{PATH_OUT}}/{{EXP_NAME}}/venv" ]; then
+    rm -rf {{PATH_OUT}}/{{EXP_NAME}}/venv
+fi
