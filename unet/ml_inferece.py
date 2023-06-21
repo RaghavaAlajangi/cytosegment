@@ -9,7 +9,8 @@ from .cli.cli_inference import load_model
 from .ml_metrics import IoUCoeff, DiceCoeff
 from .ml_dataset import *
 
-data_path = Path(__file__).parents[1] / "data/training_testing_set_w_beads/testing"
+data_path = Path(__file__).parents[
+                1] / "data/training_testing_set_w_beads/testing"
 
 
 def inference(model_path, results_path, min_max=True, use_cuda=True,
@@ -25,8 +26,6 @@ def inference(model_path, results_path, min_max=True, use_cuda=True,
         out_path = results_path / "test_results_gpu"
     else:
         out_path = results_path / "test_results_cpu"
-
-    out_path.mkdir(parents=True, exist_ok=True)
 
     img_files, msk_files = get_data_files(data_path, shuffle=False)
     images, masks = read_data(img_files, msk_files)
@@ -78,6 +77,7 @@ def inference(model_path, results_path, min_max=True, use_cuda=True,
     dice_scores = dice_scores.detach().cpu().numpy()
 
     if save_results:
+        out_path.mkdir(parents=True, exist_ok=True)
         fig = plt.figure(figsize=(8, 4))
         plt.hist(dice_scores, bins=50, label="Dice Scores")
         plt.legend()

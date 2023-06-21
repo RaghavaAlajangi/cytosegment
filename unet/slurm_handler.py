@@ -9,11 +9,12 @@ bash_path = Path(__file__).parents[1] / "slurm_template" / "train_hpc.sh"
 
 
 def get_exp_name(params):
-    path1 = "unet_tune_d{{depth}}_f{{filters}}_dr{{dropout}}_aug" \
-            "{{augmentation}}_b{{batch_size}}_alpha{{alpha}}_gamma{{gamma}}_" \
+    path1 = "unet_tune_d{{depth}}_f{{filters}}_di{{dilation}}_dr{{dropout}}_" \
+            "U{{up_mode}}_A{{attention}_Rl{{relu}}_wi{{weight_init}}_" \
+            "aug{{augmentation}}_b{{batch_size}}_al{{alpha}}_gm{{gamma}}_" \
             "lr{{learn_rate}}"
-    path2 = "unet_aug{{augmentation}}_b{{batch_size}}_alpha{{alpha}}" \
-            "_gamma{{gamma}}_lr{{learn_rate}}"
+    path2 = "unet_aug{{augmentation}}_b{{batch_size}}_al{{alpha}}" \
+            "_gm{{gamma}}_lr{{learn_rate}}"
 
     req_params = {**params.get("model"), **params.get("dataset"),
                   **params.get("criterion"), **params.get("optimizer")}
