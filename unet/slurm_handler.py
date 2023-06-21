@@ -10,17 +10,19 @@ bash_path = Path(__file__).parents[1] / "slurm_template" / "train_hpc.sh"
 
 def get_exp_name(params):
     path1 = "unet_tune_d{{depth}}_f{{filters}}_di{{dilation}}_dr{{dropout}}_" \
-            "U{{up_mode}}_A{{attention}_Rl{{relu}}_wi{{weight_init}}_" \
+            "{{up_mode}}_at{{attention}}_relu{{relu}}_{{weight_init}}_" \
             "aug{{augmentation}}_b{{batch_size}}_al{{alpha}}_gm{{gamma}}_" \
             "lr{{learn_rate}}"
-    path2 = "unet_aug{{augmentation}}_b{{batch_size}}_al{{alpha}}" \
-            "_gm{{gamma}}_lr{{learn_rate}}"
+    path2 = "unet_{{weight_init}}_aug{{augmentation}}_b{{batch_size}}_" \
+            "al{{alpha}}_gm{{gamma}}_lr{{learn_rate}}"
 
     req_params = {**params.get("model"), **params.get("dataset"),
                   **params.get("criterion"), **params.get("optimizer")}
 
     if "depth" in req_params.keys():
         for key, val in req_params.items():
+            val = "F" if str(val) == "False" else "T" if str(
+                val) == "True" else val
             path1 = path1.replace("{{" + key + "}}", str(val))
         return Path(path1)
     else:
