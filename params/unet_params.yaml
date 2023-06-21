@@ -42,7 +42,7 @@ dataset:
   random_seed: [42]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
-  num_workers: [8,16,32]
+  num_workers: [8]
 
 criterion:
   type: ["FocalTverskyLoss"]
