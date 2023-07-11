@@ -401,16 +401,16 @@ class SetupTrainer:
             if len(ckp_path) > 0:
                 final_ckp_path = ckp_path[0]
                 test_results = inference(final_ckp_path, self.ckp_path,
-                                         min_max=False, use_cuda=True,
-                                         save_results=save_test_results)
+                                         self.dataloaders["train"].dataset,
+                                         use_cuda=True, save_results=True)
                 train_logs["test_samples"] = test_results[0]
                 train_logs["inference_gpu"] = test_results[1]
                 train_logs["test_iou_mean"] = float(test_results[2].mean())
                 train_logs["test_dice_mean"] = float(test_results[3].mean())
                 self.dump_test_scores(test_results)
                 test_results = inference(final_ckp_path, self.ckp_path,
-                                         min_max=False, use_cuda=False,
-                                         save_results=False)
+                                         self.dataloaders["train"].dataset,
+                                         use_cuda=False, save_results=False)
                 train_logs["inference_cpu"] = test_results[1]
 
         # Plot and save results logs

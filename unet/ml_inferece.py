@@ -15,14 +15,11 @@ data_path = Path(__file__).parents[
                 1] / "data/training_testing_set_w_beads/testing"
 
 
-def inference(model_path, results_path, min_max=True, use_cuda=True,
+def inference(model_path, results_path, dataset, use_cuda=True,
               bsize=8, save_results=False):
-    if min_max:
-        mean = [0.6663]
-        std = [0.1742]
-    else:
-        mean = [0.486]
-        std = [0.115]
+    mean = dataset.mean[0]
+    std = dataset.std[0]
+    min_max = dataset.min_max
 
     if use_cuda:
         out_path = results_path / "test_results_gpu"
@@ -42,7 +39,7 @@ def inference(model_path, results_path, min_max=True, use_cuda=True,
                                     num_workers=0)["test"]
 
     metric1 = IoUCoeff()
-    metric2 = DiceCoeff(sample_wise=False)
+    metric2 = DiceCoeff(sample_wise=True)
 
     unet = load_model(model_path, use_cuda=use_cuda)
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -51,19 +48,12 @@ def inference(model_path, results_path, min_max=True, use_cuda=True,
     predict_list = []
     target_list = []
     tik = time.time()
-    batch_dicescores = []
-    batch_Iouscores = []
 
     for i, (img_batch, lbl_batch) in enumerate(dataloader):
         img_batch = img_batch.to(device, dtype=torch.float32)
         lbl_batch = lbl_batch.to(device, dtype=torch.float32)
 
         predicts = unet(img_batch)
-
-        bdice = metric2(predicts, lbl_batch)
-        batch_dicescores.append(bdice.detach().cpu())
-        biou = metric2(predicts, lbl_batch)
-        batch_Iouscores.append(biou.detach().cpu())
 
         predict_list.append(predicts)
         target_list.append(lbl_batch)
@@ -84,9 +74,6 @@ def inference(model_path, results_path, min_max=True, use_cuda=True,
     dice_scores = metric2(predict_torch, target_torch)
     iou_scores = iou_scores.detach().cpu().numpy()
     dice_scores = dice_scores.detach().cpu().numpy()
-
-    bavg_dice = float(torch.mean(torch.stack(batch_dicescores)))
-    bavg_iou = float(torch.mean(torch.stack(batch_Iouscores)))
 
     if save_results:
         out_path.mkdir(parents=True, exist_ok=True)
@@ -141,8 +128,8 @@ def inference(model_path, results_path, min_max=True, use_cuda=True,
             plt.legend(handles=[red_patch, green_patch])
 
             fig.tight_layout()
-            fig.savefig(out_path / f"pred_IoU_{iou:.2f}_Dice_{dice:.2f}.png")
+            fig.savefig(
+                out_path / f"pred_{n}_iou_{iou * 100:.1f}_dice_{dice * 100:.1f}.png")
             plt.close()
 
-    return test_dataset.__len__(), inf_time_per_img, iou_scores, dice_scores, \
-        bavg_dice, bavg_iou
+    return test_dataset.__len__(), inf_time_per_img, iou_scores, dice_scores
