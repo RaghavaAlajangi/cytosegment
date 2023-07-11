@@ -36,16 +36,19 @@ def get_model_with_params(params):
 
     if model_type.lower() == "unettunable":
         assert {"in_channels", "out_classes"}.issubset(model_params)
+        assert {"conv_block"}.issubset(model_params)
         assert {"depth", "filters"}.issubset(model_params)
-        assert {"dilation", "dropout"}.issubset(model_params)
+        assert {"batch_norm", "dropout"}.issubset(model_params)
+        assert {"dilation", "relu"}.issubset(model_params)
         assert {"up_mode", "attention"}.issubset(model_params)
-        assert {"relu"}.issubset(model_params)
         model = UNetTunable(in_channels=model_params.get("in_channels"),
                             out_classes=model_params.get("out_classes"),
+                            conv_block=model_params.get("conv_block"),
                             depth=model_params.get("depth"),
                             filters=model_params.get("filters"),
                             dilation=model_params.get("dilation"),
                             dropout=model_params.get("dropout"),
+                            batch_norm=model_params.get("batch_norm"),
                             up_mode=model_params.get("up_mode"),
                             attention=model_params.get("attention"),
                             relu=model_params.get("relu"))
@@ -70,6 +73,7 @@ def init_weights(net, init_type="HeNormal", gain=0.02):
     -------
     The initialized network
     """
+
     def init_func(m):
         classname = m.__class__.__name__
         if hasattr(m, "weight") and (classname.find("Conv") != -1):
@@ -87,7 +91,7 @@ def init_weights(net, init_type="HeNormal", gain=0.02):
                 init.orthogonal_(m.weight.data, gain=gain)
             else:
                 raise NotImplementedError(
-                    "initialization method [%s] is not implemented" % init_type)
+                    "init method [%s] is not implemented" % init_type)
             if hasattr(m, "bias") and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
         elif classname.find("BatchNorm2d") != -1:
@@ -297,10 +301,6 @@ class AttentionBlock(nn.Module):
             nn.BatchNorm2d(1),
             nn.Sigmoid()
         )
-        # # Apply weight initialization
-        # weight_init(self.W_g)
-        # weight_init(self.W_x)
-        # weight_init(self.psi)
 
         # Select the activation function
         if relu:
@@ -323,32 +323,41 @@ class AttentionBlock(nn.Module):
 class EncodingBlock(nn.Module):
     """(CNN => BN => ReLU) * 2"""
 
-    def __init__(self, in_size, out_size, dilation=1, dropout=0,
-                 relu=True):
+    def __init__(self, in_size, out_size, conv_block, dilation,
+                 dropout, batch_norm, relu):
         super(EncodingBlock, self).__init__()
 
-        # Create dilation kernel and padding based on dilation argument
-        dilation_kernel = (1, 1) if dilation == 1 else (dilation, dilation)
+        # Create dilation kernel
+        dilation_kernel = (dilation, dilation)
         # Select the activation function
         if relu:
             activation = nn.ReLU(inplace=True)
         else:
             activation = nn.LeakyReLU(0.1, inplace=True)
 
+        # Create the block with a CNN layer
         block = [
-            nn.Conv2d(in_size, out_size,
-                      kernel_size=(3, 3),
-                      padding=dilation,
-                      dilation=dilation_kernel),
-            nn.BatchNorm2d(out_size),
-            activation,
-            nn.Conv2d(out_size, out_size,
-                      kernel_size=(3, 3),
-                      padding=dilation,
-                      dilation=dilation_kernel),
-            nn.BatchNorm2d(out_size),
-            activation,
+            nn.Conv2d(in_size, out_size, kernel_size=(3, 3),
+                      padding=dilation, dilation=dilation_kernel)
         ]
+        # Add a batch normalization layer
+        if batch_norm:
+            block.append(nn.BatchNorm2d(out_size))
+        # Add an activation layer
+        block.append(activation)
+        if conv_block == "double":
+            # Add one more CNN layer if conv_block is 'double'
+            block.append(
+                nn.Conv2d(out_size, out_size, kernel_size=(3, 3),
+                          padding=dilation, dilation=dilation_kernel)
+            )
+            # Add a batch normalization layer
+            if batch_norm:
+                block.append(nn.BatchNorm2d(out_size))
+            # Add an activation layer
+            block.append(activation)
+
+        # Add dropout layer
         if dropout > 0:
             block.append(nn.Dropout(p=dropout))
 
@@ -360,12 +369,12 @@ class EncodingBlock(nn.Module):
 
 
 class DecodingBlock(nn.Module):
-    def __init__(self, in_size, out_size, up_mode, attention=False,
-                 relu=True):
-        self.attention = attention
+    def __init__(self, in_size, out_size, up_mode, conv_block, dilation,
+                 dropout, batch_norm, relu, attention):
         super(DecodingBlock, self).__init__()
-        self.conv_block = EncodingBlock(in_size, out_size,
-                                        relu=relu)
+        self.attention = attention
+        self.conv_block = EncodingBlock(in_size, out_size, conv_block,
+                                        dilation, dropout, batch_norm, relu)
 
         self.attn_block = AttentionBlock(F_g=out_size, F_l=out_size,
                                          F_int=out_size // 2, relu=relu)
@@ -400,9 +409,9 @@ class DecodingBlock(nn.Module):
 
 
 class UNetTunable(nn.Module):
-    def __init__(self, in_channels=1, out_classes=1, depth=5, filters=6,
-                 dilation=1, dropout=0, up_mode="upconv", attention=False,
-                 relu=True):
+    def __init__(self, in_channels=1, out_classes=1, conv_block="double",
+                 depth=5, filters=6, dilation=1, dropout=0, up_mode="upconv",
+                 batch_norm=True, attention=False, relu=True):
         """
         Implementation of U-Net: Convolutional Networks for Biomedical
         Image Segmentation (Ronneberger et al., 2015)
@@ -440,6 +449,7 @@ class UNetTunable(nn.Module):
 
         super(UNetTunable, self).__init__()
         assert up_mode in ("upconv", "upsample")
+        assert conv_block in ("single", "double")
 
         prev_channels = in_channels
 
@@ -448,9 +458,8 @@ class UNetTunable(nn.Module):
         for i in range(depth):
             out_channels = 2 ** (filters + i)
             self.encoder.append(
-                EncodingBlock(prev_channels, out_channels,
-                              dilation=dilation, dropout=dropout,
-                              relu=relu)
+                EncodingBlock(prev_channels, out_channels, conv_block,
+                              dilation, dropout, batch_norm, relu)
             )
             prev_channels = out_channels
 
@@ -459,8 +468,9 @@ class UNetTunable(nn.Module):
         for i in reversed(range(depth - 1)):
             out_channels = 2 ** (filters + i)
             self.decoder.append(
-                DecodingBlock(prev_channels, out_channels, up_mode,
-                              attention=attention, relu=relu)
+                DecodingBlock(prev_channels, out_channels,
+                              up_mode, conv_block, dilation,
+                              dropout, batch_norm, relu, attention)
             )
             prev_channels = out_channels
 
