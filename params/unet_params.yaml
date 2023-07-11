@@ -2,7 +2,7 @@ model:
   type: [UNetTunable]
   in_channels: [1]
   out_classes: [1]
-  conv_block : [double]
+  conv_block: [double]
   depth: [4]
   filters: [3]
   dilation: [1]
