@@ -49,7 +49,7 @@ def plot_valid_results(results_path, n, image_torch, target_torch,
                 col.imshow(pred[r], 'gray')
                 col.set_title("pred")
                 col.axis("off")
-    fig.savefig(results_path / f"pred_at_epoch_{n}.png")
+    fig.savefig(results_path / f"valid_pred_at_epoch_{n}.png")
     plt.close(fig)
 
 
@@ -184,15 +184,6 @@ class SetupTrainer:
         bscore = []
         # Get batch of images and labels iteratively
         for n, (images, masks) in enumerate(self.dataloaders[mode]):
-            # Handling concatination of original and flipped images
-            # images = images.view(-1, images.shape[2], images.shape[3])
-            # images = images.unsqueeze(1)
-            # masks = masks.view(-1, masks.shape[2], masks.shape[3])
-            #
-            # idx = torch.randperm(images.shape[0])
-            # images = images.index_select(0, idx)
-            # masks = masks.index_select(0, idx)
-
             # Pass the data to the device
             images = images.to(self.device, dtype=torch.float32)
             masks = masks.to(self.device, dtype=torch.float32)
@@ -376,7 +367,7 @@ class SetupTrainer:
                     [epoch, val_avg_acc, val_avg_loss]
                 )
 
-            # Decay the learning rate, if validation accuracy is not improving
+            # Reduce the learning rate, if validation accuracy is not improving
             if self.scheduler and isinstance(self.scheduler, StepLR):
                 self.scheduler.step()
             else:
@@ -393,6 +384,9 @@ class SetupTrainer:
         # Calculate training time and save it in results logs
         end_time = time.time() - start_time
         train_time = str(timedelta(seconds=end_time)).split('.')[0]
+        # Reset the memory by deleting model and cache
+        del self.model
+        torch.cuda.empty_cache()
         print("=" * 80)
         print(f"Total training time: {train_time}")
         train_logs["training_time"] = train_time
@@ -425,10 +419,6 @@ class SetupTrainer:
         # self.add_graph_tb()
         if self.tensorboard:
             self.close()
-
-        # Reset the memory by deleting model and cache
-        del self.model
-        torch.cuda.empty_cache()
 
     def close(self):
         self.writer.flush()
