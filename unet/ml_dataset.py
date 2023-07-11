@@ -43,7 +43,7 @@ def get_dataloaders_with_params(params):
     img_files, msk_files = get_data_files(train_data_path, seed=random_seed,
                                           shuffle=True)
     images, masks = read_data(img_files, msk_files)
-    images, masks = crop_data(images, masks)
+    images, masks = crop_pad_data(images, masks)
     train_imgs, valid_imgs, train_msks, valid_msks = split_data(images, masks,
                                                                 valid_size)
 
@@ -95,9 +95,13 @@ def read_data(img_list, msk_list):
     return images, masks
 
 
-def crop_data(images, masks):
+def crop_pad_data(images, masks):
+    # Crop images and masks
     images = [img[8:72, :] for img in images]
     masks = [msk[8:72, :] for msk in masks]
+    # Pad images and masks
+    images = [np.pad(img, ((0, 0), (3, 3)), mode="constant") for img in images]
+    masks = [np.pad(msk, ((0, 0), (3, 3)), mode="constant") for msk in masks]
     return images, masks
 
 
@@ -164,9 +168,9 @@ class UNetDataset(Dataset):
 
         # Standardize image with mean and std values
         image = normalize(image)
-        # Padding
-        image = F.pad(image, (3, 3, 0, 0), value=0)
-        mask = F.pad(mask, (3, 3, 0, 0), value=0)
+        # # Padding
+        # image = F.pad(image, (3, 3, 0, 0), value=0)
+        # mask = F.pad(mask, (3, 3, 0, 0), value=0)
 
         if self.augment:
             # Random horizontal flipping

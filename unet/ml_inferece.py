@@ -9,7 +9,7 @@ import torch
 from .cli.cli_inference import load_model
 from .ml_metrics import IoUCoeff, DiceCoeff
 from .ml_dataset import get_data_files, read_data, create_dataloaders, \
-    crop_data, UNetDataset
+    crop_pad_data, UNetDataset
 
 data_path = Path(__file__).parents[
                 1] / "data/training_testing_set_w_beads/testing"
@@ -28,7 +28,7 @@ def inference(model_path, results_path, dataset, use_cuda=True,
 
     img_files, msk_files = get_data_files(data_path, shuffle=False)
     images, masks = read_data(img_files, msk_files)
-    images, masks = crop_data(images, masks)
+    images, masks = crop_pad_data(images, masks)
 
     test_dataset = UNetDataset(images, masks, min_max=min_max,
                                mean=mean, std=std)
