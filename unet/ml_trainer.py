@@ -12,7 +12,6 @@ import yaml
 
 from .early_stopping import EarlyStopping
 from .ml_criterions import get_criterion_with_params
-# from .ml_dataset_old import get_dataloaders_with_params
 from .ml_dataset import get_dataloaders_with_params
 from .ml_metrics import get_metric_with_params
 from .ml_models import get_model_with_params
@@ -118,8 +117,6 @@ class SetupTrainer:
 
     @classmethod
     def with_params(cls, params):
-        # Load params file (.yaml)
-        # params = yaml.safe_load(open(params_file_path))
         model = get_model_with_params(params)
         dataloaders = get_dataloaders_with_params(params)
         criterion = get_criterion_with_params(params)
@@ -135,7 +132,6 @@ class SetupTrainer:
         path_out = other_params.get("path_out")
         init_from_ckp = other_params.get("init_from_ckp")
         tensorboard = other_params.get("tensorboard")
-        # save_infe_res = other_params.get("save_inference_results")
 
         # Create a folder to store experiment results based on current time
         time_now = datetime.now().strftime('%d_%b_%Y_%H%M%S%f')

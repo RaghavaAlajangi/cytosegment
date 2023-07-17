@@ -6,29 +6,30 @@ model:
   depth: [4]
   filters: [3]
   dilation: [1]
-  batch_norm: [True]
-  dropout: [0.1]
-  up_mode: [upconv]
+  batch_norm: [False]
+  dropout: [0.1]                # Options: in the range of [0.1, 0.9]
+  up_mode: [upconv]             # Options: upconv, upsample
   attention: [False]
   relu: [True]
-  weight_init: [HeNormal]
+  weight_init: [HeNormal]       # Options: default, xavier, HeUniform, orthogonal
 
 #model:
 #  type: ["BenchUNet"]
 #  in_channels: [1]
 #  out_classes: [1]
-#  weight_init: [HeNormal]  # "default",  "xavier", "HeNormal", "HeUniform", "orthogonal"
+#  weight_init: [HeNormal]      # Options: default, xavier, HeUniform, orthogonal
 
 dataset:
   type: [PNG]
-  data_path: [data/training_testing_set_w_beads.zip]
+  data_path: [data/data_all_320.zip]
   # "min_max" = True: minimum and maximum pixel values of each image will be
   # used to normalize the dataset. Otherwise, 255 will be used to divide each
   # and every image in the dataset
+  img_size: [[80, 320]]
   min_max: [False]
-  augmentation: [False]
+  augmentation: [True]
   valid_size: [0.15]
-  batch_size: [8,16,32]
+  batch_size: [8]
 
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
@@ -36,8 +37,11 @@ dataset:
   # If there is a change in the dataset (either inclusion or exclusion of
   # image and mask pairs into the dataset), we need to recalculate the mean
   # and std values of the dataset again.
-  mean: [0.4862]
-  std: [0.1150]
+#  mean: [0.4862]
+#  std: [0.1150]
+
+  mean: [0.5272]
+  std: [0.0893]
 
 #  mean: [0.6663]
 #  std: [0.1742]
@@ -49,7 +53,7 @@ dataset:
 criterion:
   type: [FocalTverskyLoss]
   alpha: [0.5] # weightage: alpha --> FP, (1-alpha) --> FN
-  gamma: [1.3]
+  gamma: [1.5]
 
 metric:
   type: [DiceCoeff]
@@ -75,7 +79,7 @@ scheduler:
 others:
   max_epochs: [200]
   use_cuda: [True]
-  path_out: [experiments]
+  path_out: [experiments_80X320]
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'

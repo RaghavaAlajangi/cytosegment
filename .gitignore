@@ -18,6 +18,7 @@ unet.egg-info
 .coverage
 
 # data
+data_all_320
 training_testing_set_w_beads
 training_testing_set_w_beads_mirrored.zip
 

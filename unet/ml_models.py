@@ -53,6 +53,7 @@ def get_model_with_params(params):
                             attention=model_params.get("attention"),
                             relu=model_params.get("relu"))
         if weight_init.lower() == "default":
+            print(f"Default initialization of network is used!")
             return model
         else:
             return init_weights(model, init_type=weight_init)
