@@ -5,14 +5,12 @@ import matplotlib.patches as mpatches
 from pathlib import Path
 from skimage.measure import find_contours
 import torch
+import yaml
 
 from .cli.cli_inference import load_model
 from .ml_metrics import IoUCoeff, DiceCoeff
 from .ml_dataset import get_data_files, read_data, create_dataloaders, \
     crop_pad_data, UNetDataset
-
-data_path = Path(__file__).parents[
-                1] / "data/training_testing_set_w_beads/testing"
 
 
 def inference(model_path, results_path, dataset, use_cuda=True,
@@ -20,15 +18,26 @@ def inference(model_path, results_path, dataset, use_cuda=True,
     mean = dataset.mean[0]
     std = dataset.std[0]
     min_max = dataset.min_max
+    img_size = dataset.images[0].shape
+
+    exp_path = Path(*results_path.parts[:-2], results_path.parts[-1])
+    params_path = yaml.safe_load(open(exp_path / "train_params.yaml"))
+    data_path = Path(params_path["dataset"]["data_path"]).with_suffix('')
+    test_data = data_path / "testing"
 
     if use_cuda:
         out_path = results_path / "test_results_gpu"
     else:
         out_path = results_path / "test_results_cpu"
 
-    img_files, msk_files = get_data_files(data_path, shuffle=False)
+    img_files, msk_files = get_data_files(test_data, shuffle=False)
     images, masks = read_data(img_files, msk_files)
-    images, masks = crop_pad_data(images, masks)
+
+    resized_data = [crop_pad_data(img, msk, img_size) for img, msk in
+                    zip(images, masks)]
+
+    images = [sublist[0] for sublist in resized_data]
+    masks = [sublist[1] for sublist in resized_data]
 
     test_dataset = UNetDataset(images, masks, min_max=min_max,
                                mean=mean, std=std)

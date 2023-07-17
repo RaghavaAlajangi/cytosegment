@@ -22,28 +22,34 @@ def get_dataloaders_with_params(params):
     assert {"data_path", "augmentation"}.issubset(dataset_params)
     assert {"valid_size", "batch_size"}.issubset(dataset_params)
     assert {"mean", "std", "num_workers"}.issubset(dataset_params)
-    assert {"min_max"}.issubset(dataset_params)
+    assert {"min_max", "img_size"}.issubset(dataset_params)
     assert {"random_seed"}.issubset(dataset_params)
 
     data_path = dataset_params.get("data_path")
     augmentation = dataset_params.get("augmentation")
     valid_size = dataset_params.get("valid_size")
     batch_size = dataset_params.get("batch_size")
+    img_size = dataset_params.get("img_size")
     mean = dataset_params.get("mean")
     std = dataset_params.get("std")
     num_workers = dataset_params.get("num_workers")
     min_max = dataset_params.get("min_max")
     random_seed = dataset_params.get("random_seed")
 
-    pathout = Path(data_path).parents[0]
-    unzip_data(data_path, pathout)
+    pathout = Path(data_path)
+    unzip_data(data_path, pathout.parents[0])
 
-    train_data_path = pathout / "training_testing_set_w_beads" / "training"
+    train_data_path = pathout.with_suffix('') / "training"
 
     img_files, msk_files = get_data_files(train_data_path, seed=random_seed,
                                           shuffle=True)
     images, masks = read_data(img_files, msk_files)
-    images, masks = crop_pad_data(images, masks)
+    resized_data = [crop_pad_data(img, msk, img_size) for img, msk in
+                    zip(images, masks)]
+
+    images = [sublist[0] for sublist in resized_data]
+    masks = [sublist[1] for sublist in resized_data]
+
     train_imgs, valid_imgs, train_msks, valid_msks = split_data(images, masks,
                                                                 valid_size)
 
@@ -95,14 +101,31 @@ def read_data(img_list, msk_list):
     return images, masks
 
 
-def crop_pad_data(images, masks):
-    # Crop images and masks
-    images = [img[8:72, :] for img in images]
-    masks = [msk[8:72, :] for msk in masks]
-    # Pad images and masks
-    images = [np.pad(img, ((0, 0), (3, 3)), mode="constant") for img in images]
-    masks = [np.pad(msk, ((0, 0), (3, 3)), mode="constant") for msk in masks]
-    return images, masks
+def crop_pad_data(image, mask, img_size):
+    height, width = image.shape
+    target_height, target_width = img_size
+
+    height_diff = height - target_height
+    width_diff = width - target_width
+
+    if height_diff > 0:
+        height_corr = abs(height_diff) // 2
+        new_img = image[height_corr: height - height_corr, :]
+        new_msk = mask[height_corr: height - height_corr, :]
+    else:
+        hpad = abs(height_diff) // 2
+        new_img = np.pad(image, ((hpad, hpad), (0, 0)), mode="mean")
+        new_msk = np.pad(mask, ((hpad, hpad), (0, 0)), mode="constant")
+
+    if width_diff > 0:
+        width_corr = abs(width_diff) // 2
+        new_img = new_img[:, width_corr: width - width_corr]
+        new_msk = new_msk[:, width_corr: width - width_corr]
+    else:
+        wpad = abs(width_diff) // 2
+        new_img = np.pad(new_img, ((0, 0), (wpad, wpad)), mode="mean")
+        new_msk = np.pad(new_msk, ((0, 0), (wpad, wpad)), mode="constant")
+    return new_img, new_msk
 
 
 def split_data(images, masks, valid_size=0.2):
@@ -129,7 +152,6 @@ def create_dataloaders(data_dict, batch_size, num_workers=0):
             batch_size=batch_size,
             num_workers=num_workers,
             pin_memory=True,
-            # shuffle=False
             shuffle=True if k == "train" else False
         )
     return dataloader_dict
@@ -168,9 +190,6 @@ class UNetDataset(Dataset):
 
         # Standardize image with mean and std values
         image = normalize(image)
-        # # Padding
-        # image = F.pad(image, (3, 3, 0, 0), value=0)
-        # mask = F.pad(mask, (3, 3, 0, 0), value=0)
 
         if self.augment:
             # Random horizontal flipping
@@ -178,7 +197,7 @@ class UNetDataset(Dataset):
                 image = tf.hflip(image)
                 mask = tf.hflip(mask)
             # Random vertical flipping
-            if random.random() > 0.5:
+            if random.random() >= 0.5:
                 image = tf.vflip(image)
                 mask = tf.vflip(mask)
 
@@ -187,8 +206,6 @@ class UNetDataset(Dataset):
                 brightness_factor = random.uniform(-1, 1)
                 image = image + brightness_factor
 
-            # image = torch.cat([image, flipped_image], dim=0)
-            # mask = torch.cat([mask, flipped_mask], dim=0)
         return image, mask
 
     def __len__(self):
