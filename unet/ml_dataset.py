@@ -36,10 +36,10 @@ def get_dataloaders_with_params(params):
     min_max = dataset_params.get("min_max")
     random_seed = dataset_params.get("random_seed")
 
-    pathout = Path(data_path)
-    unzip_data(data_path, pathout.parents[0])
-
-    train_data_path = pathout.with_suffix('') / "training"
+    pathout = Path(data_path).with_suffix('')
+    train_data_path = pathout / "training"
+    if not train_data_path.exists():
+        unzip_data(data_path, pathout.parents[0])
 
     img_files, msk_files = get_data_files(train_data_path, seed=random_seed,
                                           shuffle=True)
