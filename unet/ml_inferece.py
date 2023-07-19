@@ -20,8 +20,7 @@ def inference(model_path, results_path, dataset, use_cuda=True,
     min_max = dataset.min_max
     img_size = dataset.images[0].shape
 
-    exp_path = Path(*results_path.parts[:-2], results_path.parts[-1])
-    params_path = yaml.safe_load(open(exp_path / "train_params.yaml"))
+    params_path = yaml.safe_load(open(results_path / "train_params.yaml"))
     data_path = Path(params_path["dataset"]["data_path"]).with_suffix('')
     test_data = data_path / "testing"
 

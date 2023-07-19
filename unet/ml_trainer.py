@@ -101,8 +101,7 @@ class SetupTrainer:
             self.exp_path.mkdir(parents=True, exist_ok=True)
 
         # Create a folder to save model checkpoints
-        ckp_path = self.exp_path.parents[0] / "checkpoints"
-        self.ckp_path = ckp_path / self.exp_path.name
+        self.ckp_path = self.exp_path / "checkpoints"
         self.ckp_path.mkdir(parents=True, exist_ok=True)
 
         # Create a folder to save logs with tensorboard
@@ -396,7 +395,7 @@ class SetupTrainer:
             ckp_path = [p for p in ckp_paths if f"E{req_ckp_flag}" in str(p)]
             if len(ckp_path) > 0:
                 final_ckp_path = ckp_path[0]
-                test_results = inference(final_ckp_path, self.ckp_path,
+                test_results = inference(final_ckp_path, self.exp_path,
                                          self.dataloaders["train"].dataset,
                                          use_cuda=True, save_results=True)
                 train_logs["test_samples"] = test_results[0]
@@ -404,7 +403,7 @@ class SetupTrainer:
                 train_logs["test_iou_mean"] = float(test_results[2].mean())
                 train_logs["test_dice_mean"] = float(test_results[3].mean())
                 self.dump_test_scores(test_results)
-                test_results = inference(final_ckp_path, self.ckp_path,
+                test_results = inference(final_ckp_path, self.exp_path,
                                          self.dataloaders["train"].dataset,
                                          use_cuda=False, save_results=False)
                 train_logs["inference_cpu"] = test_results[1]
