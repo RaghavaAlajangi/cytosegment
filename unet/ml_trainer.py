@@ -24,6 +24,13 @@ save_valid_results = True
 save_test_results = True
 
 
+def keep_file_delete_others(folder_path, file_to_keep):
+    folder_path = Path(folder_path)
+    for file in folder_path.iterdir():
+        if file.is_file() and file.name != file_to_keep:
+            file.unlink()
+
+
 def plot_valid_results(results_path, n, image_torch, target_torch,
                        predict_torch):
     results_path = results_path / "valid_results"
@@ -358,6 +365,7 @@ class SetupTrainer:
                                f"{int(train_avg_acc * 1e4)}_validAcc_" \
                                f"{int(val_avg_acc * 1e4)}"
                 self.save_checkpoint(new_ckp_name)
+                self.save_checkpoint(new_ckp_name, mode="original")
                 train_logs["ckp_flags"].append(
                     [epoch, val_avg_acc, val_avg_loss]
                 )
@@ -389,12 +397,22 @@ class SetupTrainer:
         ckp_flag_arr = np.array(train_logs["ckp_flags"])
 
         if len(ckp_flag_arr) > 0:
+            req_flag = int(max(ckp_flag_arr[:, 0]))
+            org_dir = self.ckp_path / "torch_original"
+            org_ckp_paths = [p for p in Path(org_dir).rglob("*.ckp")]
+            org_paths = [p for p in org_ckp_paths if f"E{req_flag}" in str(p)]
+            if len(org_paths) > 0:
+                final_org_path = org_paths[0]
+                keep_file_delete_others(org_dir, final_org_path)
+
+        if len(ckp_flag_arr) > 0:
             req_ckp_flag = int(max(ckp_flag_arr[:, 0]))
             jit_dir = self.ckp_path / "torch_jit"
             ckp_paths = [p for p in Path(jit_dir).rglob("*.ckp")]
             ckp_path = [p for p in ckp_paths if f"E{req_ckp_flag}" in str(p)]
             if len(ckp_path) > 0:
                 final_ckp_path = ckp_path[0]
+                keep_file_delete_others(jit_dir, final_ckp_path)
                 test_results = inference(final_ckp_path, self.exp_path,
                                          self.dataloaders["train"].dataset,
                                          use_cuda=True, save_results=True)
