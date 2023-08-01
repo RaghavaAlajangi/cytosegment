@@ -27,7 +27,7 @@ save_test_results = True
 def keep_file_delete_others(folder_path, file_to_keep):
     folder_path = Path(folder_path)
     for file in folder_path.iterdir():
-        if file.is_file() and file.name != file_to_keep:
+        if file.is_file() and file.name != Path(file_to_keep).name:
             file.unlink()
 
 
