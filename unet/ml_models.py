@@ -456,7 +456,7 @@ class UNetTunable(nn.Module):
 
         # Create encoding path
         self.encoder = nn.ModuleList()
-        for i in range(depth):
+        for i in range(depth + 1):
             out_channels = 2 ** (filters + i)
             self.encoder.append(
                 EncodingBlock(prev_channels, out_channels, conv_block,
@@ -466,7 +466,7 @@ class UNetTunable(nn.Module):
 
         # Creating decoding path
         self.decoder = nn.ModuleList()
-        for i in reversed(range(depth - 1)):
+        for i in reversed(range(depth)):
             out_channels = 2 ** (filters + i)
             self.decoder.append(
                 DecodingBlock(prev_channels, out_channels,
