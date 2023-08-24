@@ -46,8 +46,8 @@ def inference(model_path, results_path, dataset, use_cuda=True,
                                     batch_size=bsize,
                                     num_workers=0)["test"]
 
-    metric1 = IoUCoeff()
-    metric2 = DiceCoeff(sample_wise=True)
+    ioumetric = IoUCoeff()
+    dicemetric = DiceCoeff(sample_wise=True)
 
     unet = load_model(model_path, use_cuda=use_cuda)
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -78,8 +78,8 @@ def inference(model_path, results_path, dataset, use_cuda=True,
     predict_torch = torch.cat(predict_list, dim=0)
     target_torch = torch.cat(target_list, dim=0)
 
-    iou_scores = metric1(predict_torch, target_torch)
-    dice_scores = metric2(predict_torch, target_torch)
+    iou_scores = ioumetric(predict_torch, target_torch)
+    dice_scores = dicemetric(predict_torch, target_torch)
     iou_scores = iou_scores.detach().cpu().numpy()
     dice_scores = dice_scores.detach().cpu().numpy()
 
@@ -101,8 +101,8 @@ def inference(model_path, results_path, dataset, use_cuda=True,
             img = image_numpy[n]
             msk = mask_numpy[n]
             pred = predict_numpy[n]
-            dice = iou_scores[n]
-            iou = dice_scores[n]
+            iou = iou_scores[n]
+            dice = dice_scores[n]
 
             pred_cnt = find_contours(pred, 0.8)
             msk_cnt = find_contours(msk, 0.8)
