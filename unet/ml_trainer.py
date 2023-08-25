@@ -20,7 +20,7 @@ from .ml_schedulers import get_scheduler_with_params
 from .ml_inferece import inference
 from .utils import summary
 
-save_valid_results = True
+save_valid_results = False
 save_test_results = True
 
 
@@ -290,6 +290,7 @@ class SetupTrainer:
             org_path = str(torch_dir) + f"/{new_ckp_name}_org.ckp"
             torch.save({"model_state_dict": self.model.state_dict(),
                         "optimizer_state_dict": self.optimizer.state_dict(),
+                        "model_instance": self.model
                         }, org_path)
 
     def add_graph_tb(self):

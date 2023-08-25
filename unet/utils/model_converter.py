@@ -2,24 +2,11 @@ from pathlib import Path
 
 import torch
 
-from unet.ml_models import UNetTunable
-
 
 def convert_torch_to_onnx(torch_ckp_path):
-    model = UNetTunable(in_channels=1,
-                        out_classes=1,
-                        conv_block="double",
-                        depth=4,
-                        filters=3,
-                        dilation=1,
-                        dropout=0,
-                        up_mode="upconv",
-                        batch_norm=True,
-                        attention=False,
-                        relu=True)
-    # model = DataParallel(model)
     cuda_device = torch.device('cpu')
     ckp = torch.load(torch_ckp_path, map_location=cuda_device)
+    model = ckp["model_instance"]
     model.load_state_dict(ckp['model_state_dict'])
     model.eval()
 
