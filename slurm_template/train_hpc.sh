@@ -26,10 +26,10 @@
 # Import modules
 module purge
 module load anaconda/3/2021.11
-module load cuda/11.2
+module load cuda/11.6
+module load cudnn/8.8.1
 #Pytorch
-module load pytorch/gpu-cuda-11.2/1.9.0
-
+module load pytorch/gpu-cuda-11.6/2.0.0
 pip install virtualenv
 # Create and activate a new venv
 virtualenv --system-site-packages {{PATH_OUT}}/{{EXP_NAME}}/venv --python=python3.9.7
@@ -37,6 +37,7 @@ virtualenv --system-site-packages {{PATH_OUT}}/{{EXP_NAME}}/venv --python=python
 
 pip install albumentations
 pip install h5py
+pip install --upgrade pyodbc
 
 srun python -m unet --params_path {{PARAMS_PATH}}
 
