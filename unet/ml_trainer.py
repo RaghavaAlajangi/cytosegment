@@ -304,8 +304,11 @@ class SetupTrainer:
             yaml.dump(logs, fp, sort_keys=False, default_flow_style=None)
 
     def dump_test_scores(self, scores):
-        score_dict = {"iou_scores": scores[2],
-                      "dice_scores": scores[3]}
+        score_dict = {
+            "img_path": scores[-1],
+            "iou_scores": scores[2],
+            "dice_scores": scores[3]
+        }
         with open(self.exp_path / "test_scores.csv", "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerow(score_dict.keys())

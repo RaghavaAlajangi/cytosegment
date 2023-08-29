@@ -2,6 +2,7 @@ import time
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import numpy as np
 from pathlib import Path
 from skimage.measure import find_contours
 import torch
@@ -30,6 +31,8 @@ def inference(model_path, results_path, dataset, use_cuda=True,
         out_path = results_path / "test_results_cpu"
 
     img_files, msk_files = get_data_files(test_data, shuffle=False)
+    im_file_names = [path.stem for path in img_files]
+    im_file_names.append("Average Scores")
     images, masks = read_data(img_files, msk_files)
 
     resized_data = [crop_pad_data(img, msk, img_size) for img, msk in
@@ -83,6 +86,9 @@ def inference(model_path, results_path, dataset, use_cuda=True,
     iou_scores = iou_scores.detach().cpu().numpy()
     dice_scores = dice_scores.detach().cpu().numpy()
 
+    iou_scores = np.append(iou_scores, [np.mean(iou_scores)])
+    dice_scores = np.append(dice_scores, [np.mean(dice_scores)])
+
     if save_results:
         out_path.mkdir(parents=True, exist_ok=True)
         fig = plt.figure(figsize=(8, 4))
@@ -103,11 +109,12 @@ def inference(model_path, results_path, dataset, use_cuda=True,
             pred = predict_numpy[n]
             iou = iou_scores[n]
             dice = dice_scores[n]
+            im_name = im_file_names[n]
 
             pred_cnt = find_contours(pred, 0.8)
             msk_cnt = find_contours(msk, 0.8)
 
-            fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(15, 8))
+            fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
 
             axs[0, 0].imshow(img, 'gray')
             axs[0, 0].axis('off')
@@ -137,7 +144,7 @@ def inference(model_path, results_path, dataset, use_cuda=True,
 
             fig.tight_layout()
             fig.savefig(
-                out_path / f"pred_{n}_iou_{iou * 100:.1f}_dice_{dice * 100:.1f}.png")
+                out_path / f"{im_name}_iou_{iou * 100:.1f}_dice_{dice * 100:.1f}.png")
             plt.close()
 
-    return test_dataset.__len__(), inf_time_per_img, iou_scores, dice_scores
+    return test_dataset.__len__(), inf_time_per_img, iou_scores, dice_scores, im_file_names
