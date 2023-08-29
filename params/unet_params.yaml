@@ -3,10 +3,10 @@ model:
   in_channels: [1]
   out_classes: [1]
   conv_block: [double]
-  depth: [4]
+  depth: [2]
   filters: [3]
   dilation: [1]
-  batch_norm: [False]
+  batch_norm: [False, True]
   dropout: [0.1]                # Options: in the range of [0.1, 0.9]
   up_mode: [upconv]             # Options: upconv, upsample
   attention: [False]
@@ -21,15 +21,15 @@ model:
 
 dataset:
   type: [PNG]
-  data_path: [data/data_all_320.zip]
+  data_path: [data/training_testing_set_only_enrichment.zip]
   # "min_max" = True: minimum and maximum pixel values of each image will be
   # used to normalize the dataset. Otherwise, 255 will be used to divide each
   # and every image in the dataset
-  img_size: [[80, 320]]
+  img_size: [[64, 256]]
   min_max: [False]
   augmentation: [True]
   valid_size: [0.15]
-  batch_size: [8]
+  batch_size: [8, 16]
 
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
@@ -39,16 +39,18 @@ dataset:
   # and std values of the dataset again.
 #  mean: [0.4862]
 #  std: [0.1150]
+  mean: [ 0.48748 ]
+  std: [ 0.08355 ]
 
-  mean: [0.5272]
-  std: [0.0893]
+#  mean: [0.5272]
+#  std: [0.0893]
 
 #  mean: [0.6663]
 #  std: [0.1742]
   random_seed: [42]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
-  num_workers: [8]
+  num_workers: [0]
 
 criterion:
   type: [FocalTverskyLoss]
@@ -62,7 +64,7 @@ metric:
 
 optimizer:
   type: [Adam]
-  learn_rate: [0.01]
+  learn_rate: [0.001, 0.01]
 
 # Decays the learning rate by ``lr_decay_rate`` every ``patience``
 # epochs. Sometimes model might be ended up within local minima because
@@ -79,11 +81,11 @@ scheduler:
 others:
   max_epochs: [200]
   use_cuda: [True]
-  path_out: [experiments_80X320]
+  path_out: [unet_2conv_2lvl_8fil]
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'
-  min_ckp_acc: [0.97]
+  min_ckp_acc: [0.96]
 
   # If the model metric (validation loss) starts increasing,
   # 'early stopping' will count the n consequent epochs (patience).
