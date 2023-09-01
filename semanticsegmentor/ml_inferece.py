@@ -91,8 +91,8 @@ def inference(test_dataloader, model_path, results_path, use_cuda=True,
             img = image_numpy[n]
             msk = mask_numpy[n]
             pred = predict_numpy[n]
-            iou = iou_scores[n]
-            dice = dice_scores[n]
+            iou = iou_scores[n] * 100
+            dice = dice_scores[n] * 100
             im_name = im_file_names[n]
 
             pred_cnt = find_contours(pred, 0.8)
@@ -128,7 +128,6 @@ def inference(test_dataloader, model_path, results_path, use_cuda=True,
 
             fig.tight_layout()
             fig.savefig(
-                out_path / f"{im_name}_iou_{iou * 100:.1f}_dice_{dice * 100:.1f}.png")
+                out_path / f"{im_name}_iou_{iou:.1f}_dice_{dice:.1f}.png")
             plt.close()
-    res = (inf_time_per_img, iou_scores, dice_scores, im_file_names)
-    return res
+    return inf_time_per_img, iou_scores, dice_scores, im_file_names
