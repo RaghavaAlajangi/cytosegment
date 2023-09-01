@@ -2,12 +2,10 @@ from pathlib import Path
 import random
 import zipfile
 
-import albumentations as A
-import h5py
 import numpy as np
 from PIL import Image
 import torch
-import torch.nn.functional as F
+from torch import mean as tmean
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms as tt
 import torchvision.transforms.functional as tf
@@ -157,7 +155,52 @@ def create_dataloaders(data_dict, batch_size, num_workers=0):
     return dataloader_dict
 
 
+def compute_mean_std(data_path, img_size, min_max=False):
+    """ Computes the mean and standard deviation of a dataset.
+    Parameters
+    ----------
+    data_path: str or Path
+        Data directory path that has images and masks directories
+    img_size: tuple
+        Desired image size. Image samples are padded or cropped according
+        to the img_size automatically
+    min_max: bool
+        Determine whether to use the min and max
+
+    Returns
+    -------
+    The mean and standard deviation of the training data
+    """
+    img_files, msk_files = get_data_files(data_path, shuffle=False)
+    images, masks = read_data(img_files, msk_files)
+    resized_data = [crop_pad_data(img, msk, img_size) for img, msk in
+                    zip(images, masks)]
+
+    images = [sublist[0] for sublist in resized_data]
+    masks = [sublist[1] for sublist in resized_data]
+
+    data_dict = {"data": UNetDataset(images, masks, augment=False,
+                                     min_max=min_max)
+                 }
+
+    # Training data will be shuffled
+    dataloader_dict = create_dataloaders(data_dict, batch_size=8)
+
+    channel_sum, channel_square_sum, batch_counter = 0, 0, 0
+
+    for imgs, _ in dataloader_dict["data"]:
+        channel_sum += tmean(imgs, dim=[0, 2, 3])
+        channel_square_sum += tmean(imgs ** 2, dim=[0, 2, 3])
+
+        batch_counter += 1
+
+    mean = float(channel_sum / batch_counter)
+    std = float((channel_square_sum / batch_counter - mean ** 2) ** 0.5)
+    return mean, std
+
+
 class UNetDataset(Dataset):
+    """ Create torch dataset instance for training"""
     def __init__(self, images, masks, augment=False,
                  min_max=False, mean=None, std=None):
         self.images = images
@@ -217,40 +260,3 @@ class UNetDataset(Dataset):
         # Apply transforms
         img_tensor, mask_tensor = self.custom_transform(img, msk)
         return img_tensor, mask_tensor
-
-
-class RTDCInference(Dataset):
-    def __init__(self, rtdc_path, normalize_mode="max_pixel",
-                 mean=None, std=None):
-        rtdc_data = h5py.File(rtdc_path)["events"]
-        self.images = rtdc_data["image"]
-        self.normalize_mode = normalize_mode,
-        mean = [0.] if mean is None else [mean]
-        std = [1.] if std is None else [std]
-        max_pix_val = 1.0 if normalize_mode == "min_max" else 255.
-
-        self.transform = A.Compose([
-            A.Normalize(mean, std, max_pixel_value=max_pix_val)
-        ])
-
-    @staticmethod
-    def min_max_norm(img):
-        return (img - img.min()) / (img.max() - img.min())
-
-    def __len__(self):
-        return len(self.images)
-
-    def __getitem__(self, index):
-        img = self.images[index]
-        img = img[8:72, :]
-
-        if self.normalize_mode == "min_max":
-            img = self.min_max_norm(img)
-
-        transformed = self.transform(image=img)
-        img_tensor = torch.from_numpy(transformed["image"])
-        # Add an extra channel [H, W] --> [1, H, W]
-        img_tensor = img_tensor.unsqueeze(0)
-        # Apply padding to the images and masks (250 --> 256)
-        padded_img = F.pad(img_tensor, (3, 3, 0, 0), value=0)
-        return padded_img
