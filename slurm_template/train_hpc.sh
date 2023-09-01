@@ -28,6 +28,7 @@ module purge
 module load anaconda/3/2021.11
 module load cuda/11.6
 module load cudnn/8.8.1
+module load onnx/1.8.1
 #Pytorch
 module load pytorch/gpu-cuda-11.6/2.0.0
 pip install virtualenv
@@ -35,10 +36,7 @@ pip install virtualenv
 virtualenv --system-site-packages {{PATH_OUT}}/{{EXP_NAME}}/venv --python=python3.9.7
 . {{PATH_OUT}}/{{EXP_NAME}}/venv/bin/activate
 
-pip install albumentations
-pip install h5py
-pip install --upgrade pyodbc
-
+pip install tensorboard
 srun python -m semanticsegmentor --params_path {{PARAMS_PATH}}
 
 # Remove existing venv
