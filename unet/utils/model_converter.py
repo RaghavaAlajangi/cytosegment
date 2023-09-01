@@ -3,17 +3,18 @@ from pathlib import Path
 import torch
 
 
-def convert_torch_to_onnx(torch_ckp_path):
-    cuda_device = torch.device('cpu')
+def convert_torch_to_onnx(torch_ckp_path, img_size=(64, 256)):
+    cuda_device = torch.device("cpu")
     ckp = torch.load(torch_ckp_path, map_location=cuda_device)
     model = ckp["model_instance"]
-    model.load_state_dict(ckp['model_state_dict'])
+    model.load_state_dict(ckp["model_state_dict"])
     model.eval()
 
     onnx_path = Path(torch_ckp_path).with_suffix(".onnx")
 
     batch_size = 8
-    dummy_input = torch.randn(batch_size, 1, 64, 256, requires_grad=True)
+    dummy_input = torch.randn(batch_size, 1, img_size[0], img_size[1],
+                              requires_grad=True)
     dummy_input = dummy_input.to(cuda_device, dtype=torch.float32)
 
     # Export the model
@@ -29,12 +30,12 @@ def convert_torch_to_onnx(torch_ckp_path):
                       # whether to execute constant folding for optimization
                       do_constant_folding=True,
                       # the model's input names
-                      input_names=['input'],
+                      input_names=["input"],
                       # the model's output names
-                      output_names=['output'],
+                      output_names=["output"],
                       # variable length axes
-                      dynamic_axes={'input': {0: 'batch_size'},
-                                    'output': {0: 'batch_size'}})
+                      dynamic_axes={"input": {0: "batch_size"},
+                                    "output": {0: "batch_size"}})
 
 
 if __name__ == "__main__":
