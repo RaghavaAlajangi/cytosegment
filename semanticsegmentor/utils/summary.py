@@ -8,6 +8,7 @@ import torch.nn as nn
 def print_summary(model, input_size, batch_size=-1,
                   device=torch.device("cpu"),
                   dtypes=None):
+    model = model.cpu()
     result, params_info = summary(
         model, input_size, batch_size, device, dtypes)
     print(result)
@@ -17,6 +18,7 @@ def print_summary(model, input_size, batch_size=-1,
 
 def summary(model, input_size, batch_size=-1,
             device=torch.device("cpu"), dtypes=None):
+    model = model.cpu()
     if dtypes is None:
         dtypes = [torch.FloatTensor] * len(input_size)
 
