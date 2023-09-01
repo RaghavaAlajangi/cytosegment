@@ -24,7 +24,7 @@ loss function unusable.
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as fuc
 
 
 def get_criterion_with_params(params):
@@ -114,10 +114,8 @@ class DiceBCELoss(nn.Module):
         intersection = (predicts * targets).sum()
         dice_loss = 1 - (2. * intersection + self.eps) / (
                 predicts.sum() + targets.sum() + self.eps)
-        BCE = F.binary_cross_entropy(predicts, targets, reduction="mean")
-        Dice_BCE = BCE + dice_loss
-
-        return Dice_BCE
+        bce = fuc.binary_cross_entropy(predicts, targets, reduction="mean")
+        return bce + dice_loss
 
 
 class IoULoss(nn.Module):
@@ -148,21 +146,18 @@ class IoULoss(nn.Module):
         intersection = (predicts * targets).sum()
         total = (predicts + targets).sum()
         union = total - intersection
-
-        IoU = (intersection + self.eps) / (union + self.eps)
-
-        return 1 - IoU
+        return 1 - (intersection + self.eps) / (union + self.eps)
 
 
 class FocalLoss(nn.Module):
     """
     Focal Loss:
-    Focal Loss was introduced by Lin et al of Facebook AI Research
+    Focal Loss was introduced by Lin et al. of Facebook AI Research
     in 2017 as a means of combatting extremely imbalanced datasets where
     positive cases were relatively rare. Their paper "Focal Loss for Dense
     Object Detection" is retrievable here: https://arxiv.org/abs/1708.02002.
     In practice, the researchers used an alpha-modified version of the
-    function so it has been included in this implementation.
+    function, so it has been included in this implementation.
     """
 
     def __init__(self, alpha=0.8, gamma=2):
@@ -181,9 +176,9 @@ class FocalLoss(nn.Module):
         targets = targets.view(-1)
 
         # first compute binary cross-entropy
-        BCE = F.binary_cross_entropy(predicts, targets, reduction="mean")
-        BCE_EXP = torch.exp(-BCE)
-        focal_loss = self.alpha * (1 - BCE_EXP) ** self.gamma * BCE
+        bce = fuc.binary_cross_entropy(predicts, targets, reduction="mean")
+        bce_exp = torch.exp(-bce)
+        focal_loss = self.alpha * (1 - bce_exp) ** self.gamma * bce
 
         return focal_loss
 
@@ -228,12 +223,12 @@ class TverskyLoss(nn.Module):
         targets = targets.view(-1)
 
         # True Positives, False Positives & False Negatives
-        TP = (predicts * targets).sum()
-        FP = ((1 - targets) * predicts).sum()
-        FN = (targets * (1 - predicts)).sum()
+        tp = (predicts * targets).sum()
+        fp = ((1 - targets) * predicts).sum()
+        fn = (targets * (1 - predicts)).sum()
 
-        tversky = (TP + self.eps) / (TP + self.alpha * FP +
-                                     self.beta * FN + self.eps)
+        tversky = (tp + self.eps) / (tp + self.alpha * fp +
+                                     self.beta * fn + self.eps)
         return 1 - tversky
 
 
@@ -263,10 +258,10 @@ class FocalTverskyLoss(nn.Module):
         targets = targets.flatten()
 
         # True Positives, False Positives & False Negatives
-        TP = (predicts * targets).sum()
-        FN = ((1 - targets) * predicts).sum()
-        FP = (targets * (1 - predicts)).sum()
-        tversky = (TP + self.eps) / (self.eps + TP + self.alpha * FP +
-                                     (1 - self.alpha) * FN)
+        tp = (predicts * targets).sum()
+        fn = ((1 - targets) * predicts).sum()
+        fp = (targets * (1 - predicts)).sum()
+        tversky = (tp + self.eps) / (self.eps + tp + self.alpha * fp +
+                                     (1 - self.alpha) * fn)
         focal_tversky = (1 - tversky) ** self.gamma
         return focal_tversky
