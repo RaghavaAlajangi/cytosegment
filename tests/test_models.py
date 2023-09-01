@@ -1,6 +1,6 @@
 import torch
 
-from semanticsegmenter.ml_models import UNet, UNetTunable
+from semanticsegmentor.ml_models import UNet, UNetTunable
 
 
 def test_unet_model():

@@ -1,6 +1,6 @@
 import numpy as np
 
-from semanticsegmenter.ml_criterions import FocalTverskyLoss
+from semanticsegmentor.ml_criterions import FocalTverskyLoss
 
 from .helper_methods import get_test_tensors
 

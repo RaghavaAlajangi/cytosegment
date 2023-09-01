@@ -1,6 +1,6 @@
 import numpy as np
 
-from semanticsegmenter.ml_metrics import IoUCoeff
+from semanticsegmentor.ml_metrics import IoUCoeff
 
 from .helper_methods import get_test_tensors
 
