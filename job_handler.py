@@ -86,7 +86,7 @@ def main(slurm=False, local=False):
         exp_dict["others"]["path_out"] = str(exp_path)
         # Save experiment yaml file
         params_path = exp_path / "params.yaml"
-        with open(params_path, 'w') as file:
+        with open(params_path, "w") as file:
             yaml.dump(exp_dict, file, sort_keys=False)
         if slurm:
             # Read the slurm job template
@@ -116,7 +116,7 @@ def main(slurm=False, local=False):
             for line in slout.decode().split("\n"):
                 line = line.strip().lower()
                 if line.startswith("submitted batch job"):
-                    print(f"{n}) {line}")
+                    print(f"{n+1}) {line}")
         elif local:
             sp.run(["python", "-m", "semanticsegmentor", "--params_path",
                     str(Path(params_path))], shell=True)
