@@ -5,7 +5,7 @@ import sys
 maintainer = "Raghava Alajangi"
 maintainer_email = "raghava.alajangi@mpl.mpg.de"
 description = "Semantic Segmentation package for the LC project"
-name = "semanticsegmenter"
+name = "semanticsegmentor"
 year = "2022"
 
 sys.path.insert(0, realpath(dirname(__file__)) + "/" + name)
