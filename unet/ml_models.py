@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as fun
 import torch.nn.init as init
 
 
@@ -224,7 +224,7 @@ class Up(nn.Module):
         diffY = x2.size()[2] - x1.size()[2]
         diffX = x2.size()[3] - x1.size()[3]
 
-        x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
+        x1 = fun.pad(x1, [diffX // 2, diffX - diffX // 2,
                         diffY // 2, diffY - diffY // 2])
 
         # if you have padding issues, see
@@ -483,7 +483,7 @@ class UNetTunable(nn.Module):
             x = encode(x)
             if i != len(self.encoder) - 1:
                 blocks.append(x)
-                x = F.max_pool2d(x, 2)
+                x = fun.max_pool2d(x, 2)
 
         for i, decode in enumerate(self.decoder):
             x = decode(x, blocks[-i - 1])
