@@ -91,11 +91,6 @@ class SetupTrainer:
             self.early_stop = EarlyStopping(early_stop_patience)
         self.device = torch.device("cuda" if self.use_cuda else "cpu")
 
-        if self.use_cuda:
-            self.model = model.cuda()
-            self.criterion = criterion.cuda()
-            # self.model = DataParallel(model)
-
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
 
@@ -111,13 +106,19 @@ class SetupTrainer:
         self.ckp_path = self.exp_path / "checkpoints"
         self.ckp_path.mkdir(parents=True, exist_ok=True)
 
+        self.dump_model_summary(model, self.exp_path)
+
+        if self.use_cuda:
+            self.model = model.cuda()
+            self.criterion = criterion.cuda()
+            # self.model = DataParallel(model)
+
         # Create a folder to save logs with tensorboard
         if self.tensorboard:
             tb_path = str(self.exp_path.parents[0] / "tensorboard")
             run_name = str(self.exp_path.name)
             self.writer = SummaryWriter(log_dir=tb_path + f"/{run_name}")
 
-        self.dump_model_summary()
         print(f"Training samples: {len(self.dataloaders['train'].dataset)}")
         print(f"Validation samples: {len(self.dataloaders['valid'].dataset)}")
 
@@ -161,15 +162,15 @@ class SetupTrainer:
         for param in self.model.features.parameters():
             param.requires_grad = False
 
-    def dump_model_summary(self):
+    def dump_model_summary(self, model, pathout):
         images, masks = next(iter(self.dataloaders["train"]))
-        result, params_info = summary(self.model, tuple(images[0].shape))
+        result, params_info = summary(model, tuple(images[0].shape))
         print(f"Total parameters in the model:{params_info[0]}")
         print(f"Trainable parameters in the model:{params_info[1]}")
         lines = result.split("\n")
 
         # Open the CSV file in write mode
-        with open(self.exp_path / "model_summary.csv", "w", newline="") as f:
+        with open(pathout / "model_summary.csv", "w", newline="") as f:
             writer = csv.writer(f)
             for line in lines:
                 writer.writerow([line])
@@ -306,8 +307,8 @@ class SetupTrainer:
     def dump_test_scores(self, scores):
         score_dict = {
             "img_path": scores[-1],
-            "iou_scores": scores[2],
-            "dice_scores": scores[3]
+            "iou_scores": scores[1],
+            "dice_scores": scores[2]
         }
         with open(self.exp_path / "test_scores.csv", "w", newline="") as f:
             writer = csv.writer(f)
@@ -315,7 +316,6 @@ class SetupTrainer:
             writer.writerows(zip(*score_dict.values()))
 
     def start_train(self):
-        start_time = time.time()
         val_avg_acc_list = []
         train_logs = {
             "train_samples": len(self.dataloaders["train"].dataset),
@@ -335,6 +335,7 @@ class SetupTrainer:
             "dynamicLR": [],
             "early_stop": []
         }
+        start_time = time.time()
         for epoch in range(1, self.max_epochs + 1):
             train_avg_loss, train_avg_acc = self.epoch_runner(epoch,
                                                               mode="train")
