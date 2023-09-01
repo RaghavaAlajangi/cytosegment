@@ -35,8 +35,7 @@ def get_exp_name(params):
 
 
 def create_params_combinations(original_dict):
-    """
-    The function takes a dictionary of dictionaries as input and then generates
+    """ Take a dictionary of dictionaries as input and then generates
     all possible combinations of the values in each nested dictionary.
     Parameters
     ----------
@@ -73,6 +72,8 @@ def create_params_combinations(original_dict):
 @click.option("--local", is_flag=True, help="Run jobs locally")
 def main(slurm=False, local=False):
     experiment_dicts = create_params_combinations(main_params)
+    print("="*80)
+    print(f"Total experiments: {len(experiment_dicts)}")
     for n, exp_dict in enumerate(experiment_dicts):
         # Create experiment name using params dict
         exp_name = get_exp_name(exp_dict)
