@@ -1,12 +1,12 @@
+from collections import OrderedDict
+
+import numpy as np
 import torch
 import torch.nn as nn
 
-from collections import OrderedDict
-import numpy as np
-
 
 def print_summary(model, input_size, batch_size=-1,
-                  device=torch.device('cuda:0'),
+                  device=torch.device("cpu"),
                   dtypes=None):
     result, params_info = summary(
         model, input_size, batch_size, device, dtypes)
@@ -16,11 +16,11 @@ def print_summary(model, input_size, batch_size=-1,
 
 
 def summary(model, input_size, batch_size=-1,
-            device=torch.device('cuda:0'), dtypes=None):
+            device=torch.device("cpu"), dtypes=None):
     if dtypes is None:
         dtypes = [torch.FloatTensor] * len(input_size)
 
-    summary_str = ''
+    summary_str = ""
 
     def register_hook(module):
         def hook(module, input, output):
