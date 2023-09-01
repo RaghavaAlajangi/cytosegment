@@ -118,7 +118,7 @@ def main(slurm=False, local=False):
                 if line.startswith("submitted batch job"):
                     print(f"{n}) {line}")
         elif local:
-            sp.run(["python", "-m", "unet", "--params_path",
+            sp.run(["python", "-m", "semanticsegmenter", "--params_path",
                     str(Path(params_path))], shell=True)
         else:
             print("Please specify job type (--slurm or --local)!")
