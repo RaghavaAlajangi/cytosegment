@@ -11,6 +11,8 @@ __pycache__
 .ipynb
 .idea/
 .ipynb_checkpoints/
+semanticsegmenter.egg-info/
+
 
 unet.egg-info
 
@@ -19,8 +21,9 @@ unet.egg-info
 
 # data
 data_all_320
-training_testing_set_w_beads
-training_testing_set_w_beads_mirrored.zip
+data/__MACOSX/
+data/training_testing_set_w_beads_and_enrichment/
+data/training_testing_set_only_enrichment/
 
 
 # Experiment dir
@@ -33,3 +36,4 @@ testing.py
 unet/new_unet.py
 tests/data/rtdc_ds_with_img_bg_ml_scores.zip
 tests/test_cli.py
+

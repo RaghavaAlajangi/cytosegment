@@ -3,13 +3,13 @@ from pathlib import Path
 
 import yaml
 
-from unet.ml_criterions import get_criterion_with_params
-from unet.ml_dataset_old import get_dataloaders_with_params
-from unet.ml_metrics import get_metric_with_params
-from unet.ml_models import get_model_with_params
-from unet.ml_optimizers import get_optimizer_with_params
-from unet.ml_schedulers import get_scheduler_with_params
-from unet.ml_trainer import SetupTrainer
+from semanticsegmenter.ml_criterions import get_criterion_with_params
+from semanticsegmenter.ml_dataset import get_dataloaders_with_params
+from semanticsegmenter.ml_metrics import get_metric_with_params
+from semanticsegmenter.ml_models import get_model_with_params
+from semanticsegmenter.ml_optimizers import get_optimizer_with_params
+from semanticsegmenter.ml_schedulers import get_scheduler_with_params
+from semanticsegmenter.ml_trainer import SetupTrainer
 from .helper_methods import retrieve_train_data_path
 
 path_in = retrieve_train_data_path("test_dataset.zip") / "dataset"

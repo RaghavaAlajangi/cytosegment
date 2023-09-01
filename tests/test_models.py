@@ -1,6 +1,6 @@
 import torch
 
-from unet.ml_models import UNet, UNetTunable
+from semanticsegmenter.ml_models import UNet, UNetTunable
 
 
 def test_unet_model():
@@ -40,7 +40,7 @@ def test_unet_tunable_model():
 
     unet_tune3 = UNetTunable(in_channels=in_channels,
                              out_classes=out_classes,
-                             depth=4, filters=3,
+                             depth=4, filters=3, batch_norm=False,
                              dilation=2, dropout=True,
                              up_mode='upsample',
                              attention=True)
@@ -70,3 +70,18 @@ def test_unet_tunable_model():
     assert out_tensor_3.shape == (6, 1, 264, 264)
     assert out_tensor_33.shape == (6, 1, 264, 264)
     assert out_tensor_333.shape == (6, 1, 264, 264)
+
+
+# from unet.utils import summary
+#
+# unet_tune3 = UNetTunable(in_channels=1,
+#                          out_classes=1,
+#                          depth=4, filters=3, batch_norm=False,
+#                          dilation=1, dropout=True,
+#                          up_mode='upsample',
+#                          attention=False)
+#
+# result, params_info = summary(unet_tune3.cuda(), tuple((1, 80, 256)))
+# print(f"Total parameters in the model:{params_info[0]}")
+# print(f"Trainable parameters in the model:{params_info[1]}")
+# print(result)

@@ -39,7 +39,7 @@ pip install albumentations
 pip install h5py
 pip install --upgrade pyodbc
 
-srun python -m unet --params_path {{PARAMS_PATH}}
+srun python -m semanticsegmentor --params_path {{PARAMS_PATH}}
 
 # Remove existing venv
 if [ -d "{{PATH_OUT}}/{{EXP_NAME}}/venv" ]; then
