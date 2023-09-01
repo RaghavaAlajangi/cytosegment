@@ -1,24 +1,14 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 from os.path import exists, dirname, realpath
-import platform
 from setuptools import setup, find_packages
 import sys
 
 maintainer = "Raghava Alajangi"
 maintainer_email = "raghava.alajangi@mpl.mpg.de"
 description = "Semantic Segmentation package for the LC project"
-name = "unet"
+name = "semanticsegmenter"
 year = "2022"
 
 sys.path.insert(0, realpath(dirname(__file__)) + "/" + name)
-
-extras_require = {
-    "cpu": ["torch>=1.13.1",
-            "torchvision>=0.13.1"],
-    "gpu": ["torch>=1.13.1+cu117",
-            "torchvision>=0.14.1"],
-}
 
 setup(
     name=name,
@@ -33,17 +23,16 @@ setup(
     description=description,
     long_description=open("README.md").read() if exists("README.md") else "",
     install_requires=[
-        "albumentations",
         "click",
-        "dclab",
-        "h5py",
         "numpy",
         "matplotlib",
+        "onnx",
         "pyyaml",
         "scikit-image",
-        "scipy",
+        "tensorboard",
+        "torch>=1.13.1",
+        "torchvision>=0.13.1"
     ],
-    extras_require=extras_require,
     python_requires=">=3.9, <4",
     keywords=["RT-DC", "segmentation"],
     classifiers=["Operating System :: OS Independent",
