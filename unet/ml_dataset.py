@@ -34,34 +34,35 @@ def get_dataloaders_with_params(params):
     min_max = dataset_params.get("min_max")
     random_seed = dataset_params.get("random_seed")
 
-    pathout = Path(data_path).with_suffix('')
+    pathout = Path(data_path).with_suffix("")
     train_data_path = pathout / "training"
+    test_data_path = pathout / "testing"
     if not train_data_path.exists():
         unzip_data(data_path, pathout.parents[0])
 
-    img_files, msk_files = get_data_files(train_data_path, seed=random_seed,
-                                          shuffle=True)
-    images, masks = read_data(img_files, msk_files)
-    resized_data = [crop_pad_data(img, msk, img_size) for img, msk in
-                    zip(images, masks)]
-
-    images = [sublist[0] for sublist in resized_data]
-    masks = [sublist[1] for sublist in resized_data]
+    images, masks = process_data(train_data_path, img_size, seed=42,
+                                 shuffle=True)
 
     train_imgs, valid_imgs, train_msks, valid_msks = split_data(images, masks,
                                                                 valid_size)
 
+    test_imgs, test_msks = process_data(test_data_path, img_size, seed=42,
+                                        shuffle=False)
+
+    # Create training dataset instance
     train_dataset = UNetDataset(train_imgs, train_msks, augment=augmentation,
-                                min_max=min_max,
-                                mean=mean, std=std)
-    # Make sure augmentation is False for validation dataset
+                                min_max=min_max, mean=mean, std=std)
+    # Create validation dataset instance and make sure augmentation is False
     valid_dataset = UNetDataset(valid_imgs, valid_msks, augment=False,
-                                min_max=min_max,
-                                mean=mean, std=std)
+                                min_max=min_max, mean=mean, std=std)
+    # Create testing dataset instance
+    test_dataset = UNetDataset(test_imgs, test_msks, augment=False,
+                               min_max=min_max, mean=mean, std=std)
 
     data_dict = {
         "train": train_dataset,
-        "valid": valid_dataset
+        "valid": valid_dataset,
+        "test": test_dataset,
     }
     # Training data will be shuffled
     dataloader_dict = create_dataloaders(data_dict, batch_size, num_workers)
@@ -69,11 +70,11 @@ def get_dataloaders_with_params(params):
 
 
 def unzip_data(pathin, pathout):
-    with zipfile.ZipFile(pathin, 'r') as zip_ref:
+    with zipfile.ZipFile(pathin, "r") as zip_ref:
         zip_ref.extractall(pathout)
 
 
-def get_data_files(data_path, seed=42, shuffle=False):
+def process_data(data_path, img_size, seed=42, shuffle=False):
     img_path = Path(data_path) / "images"
     msk_path = Path(data_path) / "masks"
 
@@ -89,13 +90,17 @@ def get_data_files(data_path, seed=42, shuffle=False):
         np.random.shuffle(img_list)
         np.random.seed(seed)
         np.random.shuffle(msk_list)
-    return img_list, msk_list
 
+    images = []
+    masks = []
 
-def read_data(img_list, msk_list):
-    # Read images and masks
-    images = [np.array(Image.open(i)) for i in img_list]
-    masks = [np.array(Image.open(i)) for i in msk_list]
+    for img_path, msk_path in zip(img_list, msk_list):
+        img = np.array(Image.open(img_path))
+        msk = np.array(Image.open(msk_path))
+        img, msk = crop_pad_data(img, msk, img_size)
+        images.append(img)
+        masks.append(msk)
+
     return images, masks
 
 
@@ -171,14 +176,8 @@ def compute_mean_std(data_path, img_size, min_max=False):
     -------
     The mean and standard deviation of the training data
     """
-    img_files, msk_files = get_data_files(data_path, shuffle=False)
-    images, masks = read_data(img_files, msk_files)
-    resized_data = [crop_pad_data(img, msk, img_size) for img, msk in
-                    zip(images, masks)]
-
-    images = [sublist[0] for sublist in resized_data]
-    masks = [sublist[1] for sublist in resized_data]
-
+    images, masks = process_data(data_path, img_size, seed=42,
+                                 shuffle=False)
     data_dict = {"data": UNetDataset(images, masks, augment=False,
                                      min_max=min_max)
                  }
@@ -201,6 +200,7 @@ def compute_mean_std(data_path, img_size, min_max=False):
 
 class UNetDataset(Dataset):
     """ Create torch dataset instance for training"""
+
     def __init__(self, images, masks, augment=False,
                  min_max=False, mean=None, std=None):
         self.images = images

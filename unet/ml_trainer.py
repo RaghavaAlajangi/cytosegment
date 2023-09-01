@@ -18,7 +18,7 @@ from .ml_models import get_model_with_params
 from .ml_optimizers import get_optimizer_with_params
 from .ml_schedulers import get_scheduler_with_params
 from .ml_inferece import inference
-from .utils import summary
+from .utils import summary, convert_torch_to_onnx
 
 save_valid_results = False
 save_test_results = True
@@ -44,15 +44,15 @@ def plot_valid_results(results_path, n, image_torch, target_torch,
     for r, row in enumerate(ax):
         for c, col in enumerate(row):
             if c == 0:
-                col.imshow(img[r], 'gray')
+                col.imshow(img[r], "gray")
                 col.set_title("img")
                 col.axis("off")
             if c == 1:
-                col.imshow(msk[r], 'gray')
+                col.imshow(msk[r], "gray")
                 col.set_title("msk")
                 col.axis("off")
             if c == 2:
-                col.imshow(pred[r], 'gray')
+                col.imshow(pred[r], "gray")
                 col.set_title("pred")
                 col.axis("off")
     fig.savefig(results_path / f"valid_pred_at_epoch_{n}.png")
@@ -103,7 +103,7 @@ class SetupTrainer:
             self.exp_path = Path(path_out)
         else:
             # Create a folder to store experiment results
-            time_now = datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
+            time_now = datetime.now().strftime("%d_%b_%Y_%H%M%S%f")
             self.exp_path = Path(path_out) / time_now
             self.exp_path.mkdir(parents=True, exist_ok=True)
 
@@ -140,13 +140,13 @@ class SetupTrainer:
         tensorboard = other_params.get("tensorboard")
 
         # Create a folder to store experiment results based on current time
-        time_now = datetime.now().strftime('%d_%b_%Y_%H%M%S%f')
+        time_now = datetime.now().strftime("%d_%b_%Y_%H%M%S%f")
         exp_path = Path(path_out) / time_now
         exp_path.mkdir(parents=True, exist_ok=True)
 
         # Save session parameters as a params.yaml file
         out_file_path = exp_path / "train_params.yaml"
-        with open(out_file_path, 'w') as file:
+        with open(out_file_path, "w") as file:
             yaml.dump(params, file, sort_keys=False)
 
         return cls(model, dataloaders, criterion, metric, optimizer,
@@ -175,13 +175,13 @@ class SetupTrainer:
                 writer.writerow([line])
 
     def epoch_runner(self, epoch, mode):
-        if mode.lower() == 'train':
+        if mode.lower() == "train":
             self.model.train()
-        if mode.lower() == 'valid':
+        if mode.lower() == "valid":
             self.model.eval()
         loss_list = []
-        predict_list = []
-        mask_list = []
+        # predict_list = []
+        # mask_list = []
 
         bscore = []
         # Get batch of images and labels iteratively
@@ -192,13 +192,13 @@ class SetupTrainer:
             # Zero the parameter gradients
             self.optimizer.zero_grad()
             # Track history only in train mode
-            with torch.set_grad_enabled(mode.lower() == 'train'):
+            with torch.set_grad_enabled(mode.lower() == "train"):
                 predicts = self.model(images)
                 # [B, 1, H, W] --> [B, H, W] for loss calculation
                 # predicts = predicts.squeeze(1)
                 loss = self.criterion(predicts, masks)
                 # Backward + optimize only in train mode
-                if mode.lower() == 'train':
+                if mode.lower() == "train":
                     loss.backward()
                     self.optimizer.step()
                 loss_item = loss.item()
@@ -299,7 +299,7 @@ class SetupTrainer:
         images = images.to(self.device, dtype=torch.float32)
         self.writer.add_graph(self.model, images)
 
-    def dump_results(self, logs):
+    def dump_train_logs(self, logs):
         with open(self.exp_path / "train_logs.yaml", "w") as fp:
             yaml.dump(logs, fp, sort_keys=False, default_flow_style=None)
 
@@ -309,7 +309,7 @@ class SetupTrainer:
             "iou_scores": scores[2],
             "dice_scores": scores[3]
         }
-        with open(self.exp_path / "test_scores.csv", "w", newline='') as f:
+        with open(self.exp_path / "test_scores.csv", "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(score_dict.keys())
             writer.writerows(zip(*score_dict.values()))
@@ -320,8 +320,8 @@ class SetupTrainer:
         train_logs = {
             "train_samples": len(self.dataloaders["train"].dataset),
             "valid_samples": len(self.dataloaders["valid"].dataset),
+            "test_samples": len(self.dataloaders["test"].dataset),
             "training_time": 0,
-            "test_samples": 0,
             "inference_gpu": 0,
             "inference_cpu": 0,
             "test_iou_mean": 0,
@@ -390,7 +390,7 @@ class SetupTrainer:
                     break
         # Calculate training time and save it in results logs
         end_time = time.time() - start_time
-        train_time = str(timedelta(seconds=end_time)).split('.')[0]
+        train_time = str(timedelta(seconds=end_time)).split(".")[0]
         # Reset the memory by deleting model and cache
         del self.model
         torch.cuda.empty_cache()
@@ -408,6 +408,7 @@ class SetupTrainer:
             if len(org_paths) > 0:
                 final_org_path = org_paths[0]
                 keep_file_delete_others(org_dir, final_org_path)
+                convert_torch_to_onnx(final_org_path)
 
         if len(ckp_flag_arr) > 0:
             req_ckp_flag = int(max(ckp_flag_arr[:, 0]))
@@ -417,22 +418,24 @@ class SetupTrainer:
             if len(ckp_path) > 0:
                 final_ckp_path = ckp_path[0]
                 keep_file_delete_others(jit_dir, final_ckp_path)
-                test_results = inference(final_ckp_path, self.exp_path,
-                                         self.dataloaders["train"].dataset,
-                                         use_cuda=True, save_results=True)
-                train_logs["test_samples"] = test_results[0]
-                train_logs["inference_gpu"] = test_results[1]
-                train_logs["test_iou_mean"] = float(test_results[2].mean())
-                train_logs["test_dice_mean"] = float(test_results[3].mean())
+                test_results = inference(self.dataloaders["test"],
+                                         final_ckp_path, self.exp_path,
+                                         use_cuda=False,
+                                         save_results=save_test_results)
+                train_logs["inference_cpu"] = test_results[0]
+                train_logs["test_iou_mean"] = float(test_results[1].mean())
+                train_logs["test_dice_mean"] = float(test_results[2].mean())
                 self.dump_test_scores(test_results)
-                test_results = inference(final_ckp_path, self.exp_path,
-                                         self.dataloaders["train"].dataset,
-                                         use_cuda=False, save_results=False)
-                train_logs["inference_cpu"] = test_results[1]
+                # Run inference using gpu only it is available
+                if torch.cuda.is_available():
+                    test_results = inference(self.dataloaders["test"],
+                                             final_ckp_path, self.exp_path,
+                                             use_cuda=True, save_results=False)
+                    train_logs["inference_gpu"] = test_results[0]
 
         # Plot and save results logs
         self.plot_logs(train_logs)
-        self.dump_results(train_logs)
+        self.dump_train_logs(train_logs)
         # self.add_graph_tb()
         if self.tensorboard:
             self.close()
