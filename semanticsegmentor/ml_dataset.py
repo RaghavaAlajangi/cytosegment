@@ -107,6 +107,7 @@ def process_data(data_path, img_size, seed=42, shuffle=False):
 def crop_pad_data(image, mask, img_size):
     height, width = image.shape
     target_height, target_width = img_size
+    im_mean = image.mean()
 
     height_diff = height - target_height
     width_diff = width - target_width
@@ -117,8 +118,9 @@ def crop_pad_data(image, mask, img_size):
         new_msk = mask[height_corr: height - height_corr, :]
     else:
         hpad = abs(height_diff) // 2
-        new_img = np.pad(image, ((hpad, hpad), (0, 0)), mode="mean")
-        new_msk = np.pad(mask, ((hpad, hpad), (0, 0)), mode="constant")
+        new_img = np.pad(image, ((hpad, hpad), (0, 0)),
+                         constant_values=(im_mean, im_mean))
+        new_msk = np.pad(mask, ((hpad, hpad), (0, 0)), constant_values=(0, 0))
 
     if width_diff > 0:
         width_corr = abs(width_diff) // 2
@@ -126,8 +128,10 @@ def crop_pad_data(image, mask, img_size):
         new_msk = new_msk[:, width_corr: width - width_corr]
     else:
         wpad = abs(width_diff) // 2
-        new_img = np.pad(new_img, ((0, 0), (wpad, wpad)), mode="mean")
-        new_msk = np.pad(new_msk, ((0, 0), (wpad, wpad)), mode="constant")
+        new_img = np.pad(new_img, ((0, 0), (wpad, wpad)),
+                         constant_values=(im_mean, im_mean))
+        new_msk = np.pad(new_msk, ((0, 0), (wpad, wpad)),
+                         constant_values=(0, 0))
     return new_img, new_msk
 
 
@@ -176,8 +180,7 @@ def compute_mean_std(data_path, img_size, min_max=False):
     -------
     The mean and standard deviation of the training data
     """
-    images, masks = process_data(data_path, img_size, seed=42,
-                                 shuffle=False)
+    images, masks = process_data(data_path, img_size, seed=42, shuffle=False)
     data_dict = {"data": UNetDataset(images, masks, augment=False,
                                      min_max=min_max)
                  }
