@@ -1,9 +1,13 @@
 # virtualenv
 venv/
-
+venv3/
 # Training data
 all_data/
-htmlcov
+htmlcov/
+data_all_320/
+data/__MACOSX/
+data/training_testing_set_w_beads_and_enrichment/
+data/training_testing_set_only_enrichment/
 
 
 # Byte-compiled / optimized / DLL files
@@ -13,18 +17,11 @@ __pycache__
 .ipynb_checkpoints/
 semanticsegmentor.egg-info/
 
-
 unet.egg-info
-
 .env
 .coverage
-
-# data
-data_all_320
-data/__MACOSX/
-data/training_testing_set_w_beads_and_enrichment/
-data/training_testing_set_only_enrichment/
-
+build/
+.pytest_cache
 
 # Experiment dir
 experiments

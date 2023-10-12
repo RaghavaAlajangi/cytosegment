@@ -5,10 +5,18 @@ segmentation.
 
 ## Installation
 
+#### Install as a package
+```bash
+semanticsegmentor@git+ssh://git@gitlab.gwdg.de/blood_data_analysis/SemanticSegmentor.git
+```
+
+#### Install in editable mode
+
 1. Clone the project:  
 ```bash
 git clone git@gitlab.gwdg.de:blood_data_analysis/SemanticSegmentor.git
 ```
+
 2. Go to the project directory:
 ```bash
 cd SemanticSegmentor
