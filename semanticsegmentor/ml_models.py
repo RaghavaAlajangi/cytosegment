@@ -53,7 +53,7 @@ def get_model_with_params(params):
                             attention=model_params.get("attention"),
                             relu=model_params.get("relu"))
         if weight_init.lower() == "default":
-            print(f"Default initialization of network is used!")
+            print("Default initialization of network is used!")
             return model
         else:
             return init_weights(model, init_type=weight_init)
@@ -225,7 +225,7 @@ class Up(nn.Module):
         diffX = x2.size()[3] - x1.size()[3]
 
         x1 = fun.pad(x1, [diffX // 2, diffX - diffX // 2,
-                        diffY // 2, diffY - diffY // 2])
+                          diffY // 2, diffY - diffY // 2])
 
         # if you have padding issues, see
         # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd

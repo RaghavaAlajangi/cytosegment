@@ -15,7 +15,7 @@ def get_dataloaders_with_params(params):
     assert {"dataset"}.issubset(params)
     dataset_params = params.get("dataset")
     assert {"type"}.issubset(dataset_params)
-    data_type = dataset_params.get("type")
+    # data_type = dataset_params.get("type")
 
     assert {"data_path", "augmentation"}.issubset(dataset_params)
     assert {"valid_size", "batch_size"}.issubset(dataset_params)
@@ -40,7 +40,7 @@ def get_dataloaders_with_params(params):
     if not train_data_path.exists():
         unzip_data(data_path, pathout.parents[0])
 
-    images, masks = process_data(train_data_path, img_size, seed=42,
+    images, masks = process_data(train_data_path, img_size, seed=random_seed,
                                  shuffle=True)
 
     train_imgs, valid_imgs, train_msks, valid_msks = split_data(images, masks,
@@ -79,8 +79,10 @@ def process_data(data_path, img_size, seed=42, shuffle=False):
     msk_path = Path(data_path) / "masks"
 
     # Get the list of all the ".png" files
-    img_list = sorted([p for p in Path(img_path).rglob("*.png") if p.is_file()])
-    msk_list = sorted([p for p in Path(msk_path).rglob("*.png") if p.is_file()])
+    img_list = sorted([p for p in Path(img_path).rglob("*.png")
+                       if p.is_file()])
+    msk_list = sorted([p for p in Path(msk_path).rglob("*.png")
+                       if p.is_file()])
 
     assert len(img_list) == len(msk_list)
 
