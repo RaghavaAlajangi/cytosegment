@@ -409,7 +409,10 @@ class SetupTrainer:
             if len(org_paths) > 0:
                 final_org_path = org_paths[0]
                 keep_file_delete_others(org_dir, final_org_path)
-                convert_torch_to_onnx(final_org_path)
+                convert_torch_to_onnx(
+                    final_org_path,
+                    img_size=self.dataloaders["train"].dataset.images[0].shape
+                )
 
         if len(ckp_flag_arr) > 0:
             req_ckp_flag = int(max(ckp_flag_arr[:, 0]))
