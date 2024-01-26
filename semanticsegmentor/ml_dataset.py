@@ -7,8 +7,6 @@ from PIL import Image
 import torch
 from torch import mean as tmean
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms as tt
-import torchvision.transforms.functional as tf
 
 
 def get_dataloaders_with_params(params):
@@ -212,8 +210,8 @@ class UNetDataset(Dataset):
         self.masks = masks
         self.min_max = min_max
         self.augment = augment
-        self.mean = [0.] if mean is None else [mean]
-        self.std = [1.] if std is None else [std]
+        self.mean = 0. if mean is None else mean
+        self.std = 1. if std is None else std
 
     @staticmethod
     def min_max_norm(img):
@@ -222,39 +220,47 @@ class UNetDataset(Dataset):
         return norm_ten_img.unsqueeze(0)
 
     def custom_transform(self, image, mask):
-        # Instantiate normalize and to_tensor functions
-        normalize = tt.Normalize(self.mean, self.std)
-        to_tensor = tt.ToTensor()
+        # Normalize image and mask (mapping to [0, 1])
+        mask = mask / 255.0
+        image = image / 255.0
 
-        # Make sure mask is binary and tensor
-        mask = mask / mask.max()
-        mask = torch.tensor(mask, dtype=torch.float32)
+        # Standardize image
+        image = (image - self.mean) / self.std
 
-        if self.min_max:
-            image = self.min_max_norm(image)
-        else:
-            # Normalize image (divides the image with 255)
-            image = to_tensor(image)
-
-        # Standardize image with mean and std values
-        image = normalize(image)
+        # Expand image dimension [H, W] -> [1, 1, H, W]
+        exp_img = np.expand_dims(image, axis=(0, 1))
+        # Expand mask dimension [H, W] -> [1, H, W]
+        exp_msk = np.expand_dims(mask, axis=0)
 
         if self.augment:
-            # Random horizontal flipping
-            if random.random() >= 0.5:
-                image = tf.hflip(image)
-                mask = tf.hflip(mask)
-            # Random vertical flipping
-            if random.random() >= 0.5:
-                image = tf.vflip(image)
-                mask = tf.vflip(mask)
+            image_copy = exp_img.copy()
+            mask_copy = exp_msk.copy()
 
-            # Apply brightness (add/subtract a random number from the image)
-            if random.random() >= 0.5:
-                brightness_factor = random.uniform(-1, 1)
-                image = image + brightness_factor
+            # Apply horizontal (left to right) flipping
+            image_flip = np.flip(image_copy, axis=-1)
+            mask_flip = np.flip(mask_copy, axis=-1)
 
-        return image, mask
+            # Apply brightness
+            # add a random number in between (-1, 1) from the image)
+            brightness_factor = random.uniform(-1, 1)
+            image_flip = image_flip + brightness_factor
+
+            # Concatenate original and augmented samples
+            trans_img = np.concatenate((image_copy, image_flip), axis=0)
+            trans_msk = np.concatenate((mask_copy, mask_flip), axis=0)
+
+            # Convert numpy to float tensor
+            img_ten = torch.tensor(trans_img, dtype=torch.float32)
+            msk_ten = torch.tensor(trans_msk, dtype=torch.float32)
+
+            return img_ten, msk_ten
+
+        else:
+            # Convert numpy to float tensor
+            img_ten = torch.tensor(exp_img, dtype=torch.float32)
+            msk_ten = torch.tensor(exp_msk, dtype=torch.float32)
+
+            return img_ten, msk_ten
 
     def __len__(self):
         return len(self.images)
