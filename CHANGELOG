@@ -1,2 +1,3 @@
 0.0.1
+ - enh: update data augmentation and loading
  - ref: create a module for models
