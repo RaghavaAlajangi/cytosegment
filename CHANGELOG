@@ -1,4 +1,5 @@
 0.0.1
+ - ref: unzipping data properly
  - ref: migrate model summary to model_utils.py
  - enh: update data augmentation and loading
  - ref: create a module for models
