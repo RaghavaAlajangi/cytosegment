@@ -283,19 +283,21 @@ class SetupTrainer:
               f"Val_loss:{val_loss:.4f} | Val_acc:{val_acc:.4f}]")
 
     def save_checkpoint(self, new_ckp_name, mode="jit"):
+        # make sure model is in eval mode
+        model = self.model.eval()
         if mode == "jit":
             jit_dir = self.ckp_path / "torch_jit"
             jit_dir.mkdir(parents=True, exist_ok=True)
             jit_path = str(jit_dir) + f"/{new_ckp_name}_jit.ckp"
-            model_scripted = torch.jit.script(self.model)
+            model_scripted = torch.jit.script(model)
             model_scripted.save(jit_path)
         else:
             torch_dir = self.ckp_path / "torch_original"
             torch_dir.mkdir(parents=True, exist_ok=True)
             org_path = str(torch_dir) + f"/{new_ckp_name}_org.ckp"
-            torch.save({"model_state_dict": self.model.state_dict(),
+            torch.save({"model_state_dict": model.state_dict(),
                         "optimizer_state_dict": self.optimizer.state_dict(),
-                        "model_instance": self.model
+                        "model_instance": model
                         }, org_path)
 
     def add_graph_tb(self):
