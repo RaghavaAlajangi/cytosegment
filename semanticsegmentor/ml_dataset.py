@@ -32,11 +32,7 @@ def get_dataloaders_with_params(params):
     min_max = dataset_params.get("min_max")
     random_seed = dataset_params.get("random_seed")
 
-    pathout = Path(data_path).with_suffix("")
-    train_data_path = pathout / "training"
-    test_data_path = pathout / "testing"
-    if not train_data_path.exists():
-        unzip_data(data_path, pathout.parents[0])
+    train_data_path, test_data_path = unzip_data(data_path)
 
     images, masks = process_data(train_data_path, img_size, seed=random_seed,
                                  shuffle=True)
@@ -67,9 +63,22 @@ def get_dataloaders_with_params(params):
     return dataloader_dict
 
 
-def unzip_data(pathin, pathout):
-    with zipfile.ZipFile(pathin, "r") as zip_ref:
-        zip_ref.extractall(pathout)
+def unzip_data(zipped_data_path):
+    """Unzip data path and return train and test data paths"""
+
+    # Create output path from input path
+    pathout = Path(zipped_data_path).with_suffix("")
+
+    # Create train and test datasets output paths
+    train_data_path = pathout / "training"
+    test_data_path = pathout / "testing"
+
+    # Extract zipped file, if train and test dirs are not existed.
+    if not train_data_path.exists() or not test_data_path.exists():
+        with zipfile.ZipFile(zipped_data_path, "r") as zip_ref:
+            zip_ref.extractall(pathout.parents[0])
+
+    return train_data_path, test_data_path
 
 
 def process_data(data_path, img_size, seed=42, shuffle=False):
