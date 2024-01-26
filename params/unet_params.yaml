@@ -1,5 +1,5 @@
 model:
-  type: [UNetTunable]
+  type: [TunableUNet]
   in_channels: [1]
   out_classes: [1]
   conv_block: [single]
@@ -7,7 +7,7 @@ model:
   filters: [3]
   dilation: [1]
   batch_norm: [True]
-  dropout: [0]               # Options: in the range of [0.1, 0.9]
+  dropout: [0]                  # Options: in the range of [0.1, 0.9]
   up_mode: [upconv]             # Options: upconv, upsample
   attention: [False]
   relu: [True]
@@ -34,15 +34,13 @@ dataset:
   # and std values of the dataset again.
 
   # Mean and std values for enriched dataset - with beads
-  mean: [0.498]
-  std: [0.086]
+#  mean: [0.498]
+#  std: [0.086]
 
-#  # Mean and std values for enriched dataset - without beads
-#  mean: [0.487]
-#  std: [0.084]
+  # Mean and std values for enriched dataset - without beads
+  mean: [0.487]
+  std: [0.084]
 
-#  mean: [0.6663]
-#  std: [0.1742]
   random_seed: [42]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
@@ -75,9 +73,9 @@ scheduler:
   lr_decay_rate: [0.5] # Ex: after 5 epochs lr becomes 0.01*0.1 = 0.001
 
 others:
-  max_epochs: [200]
+  max_epochs: [5]
   use_cuda: [True]
-  path_out: [1x-conv 2-levels 8-filters/batch_norm_lr0.001]
+  path_out: [experiments]
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'
@@ -101,4 +99,3 @@ hpc_params:
   mail_id: raghava.alajangi@mpl.mpg.de
   max_mem_GB: 5
   max_time_hours: 1
-
