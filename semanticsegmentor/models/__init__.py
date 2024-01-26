@@ -1,7 +1,7 @@
 from .tune_unet import TunableUNet
 from .bench_unet import BenchmarkUNet
 from .small_unet import UNet
-from .model_utils import init_weights
+from .model_utils import init_weights, summary
 
 
 def get_model_with_params(params):
