@@ -1,3 +1,9 @@
+0.0.2
+ - fix: pass target shape for onnx conversion
+ - fix: remove min_max from assertion
+ - fix: remove concatenation for without augmentation
+ - ref: include sigmoid in model architecture
+ - ref: resize samples in unet dataset
 0.0.1
  - enh: save checkpoint in model eval mode
  - ref: unzipping data properly
