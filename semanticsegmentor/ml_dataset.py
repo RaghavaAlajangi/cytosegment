@@ -29,29 +29,27 @@ def get_dataloaders_with_params(params):
     mean = dataset_params.get("mean")
     std = dataset_params.get("std")
     num_workers = dataset_params.get("num_workers")
-    min_max = dataset_params.get("min_max")
     random_seed = dataset_params.get("random_seed")
 
     train_data_path, test_data_path = unzip_data(data_path)
 
-    images, masks = process_data(train_data_path, img_size, seed=random_seed,
-                                 shuffle=True)
+    images, masks = read_data(train_data_path, seed=random_seed,
+                              shuffle=True)
 
     train_imgs, valid_imgs, train_msks, valid_msks = split_data(images, masks,
                                                                 valid_size)
 
-    test_imgs, test_msks = process_data(test_data_path, img_size, seed=42,
-                                        shuffle=False)
+    test_imgs, test_msks = read_data(test_data_path, seed=42, shuffle=False)
 
     # Create training dataset instance
-    train_dataset = UNetDataset(train_imgs, train_msks, augment=augmentation,
-                                min_max=min_max, mean=mean, std=std)
+    train_dataset = UNetDataset(train_imgs, train_msks, target_shape=img_size,
+                                augment=augmentation, mean=mean, std=std)
     # Create validation dataset instance and make sure augmentation is False
-    valid_dataset = UNetDataset(valid_imgs, valid_msks, augment=False,
-                                min_max=min_max, mean=mean, std=std)
+    valid_dataset = UNetDataset(valid_imgs, valid_msks, target_shape=img_size,
+                                augment=False, mean=mean, std=std)
     # Create testing dataset instance
-    test_dataset = UNetDataset(test_imgs, test_msks, augment=False,
-                               min_max=min_max, mean=mean, std=std)
+    test_dataset = UNetDataset(test_imgs, test_msks, target_shape=img_size,
+                               augment=False, mean=mean, std=std)
 
     data_dict = {
         "train": train_dataset,
@@ -81,7 +79,7 @@ def unzip_data(zipped_data_path):
     return train_data_path, test_data_path
 
 
-def process_data(data_path, img_size, seed=42, shuffle=False):
+def read_data(data_path, seed=42, shuffle=False):
     img_path = Path(data_path) / "images"
     msk_path = Path(data_path) / "masks"
 
@@ -95,10 +93,10 @@ def process_data(data_path, img_size, seed=42, shuffle=False):
 
     if shuffle:
         # Shuffle img_list and msk_list
-        np.random.seed(seed)
-        np.random.shuffle(img_list)
-        np.random.seed(seed)
-        np.random.shuffle(msk_list)
+        random.seed(seed)
+        random.shuffle(img_list)
+        random.seed(seed)
+        random.shuffle(msk_list)
 
     images = []
     masks = []
@@ -106,42 +104,10 @@ def process_data(data_path, img_size, seed=42, shuffle=False):
     for img_path, msk_path in zip(img_list, msk_list):
         img = np.array(Image.open(img_path))
         msk = np.array(Image.open(msk_path))
-        img, msk = crop_pad_data(img, msk, img_size)
         images.append(img)
         masks.append(msk)
 
     return images, masks
-
-
-def crop_pad_data(image, mask, img_size):
-    height, width = image.shape
-    target_height, target_width = img_size
-    im_mean = image.mean()
-
-    height_diff = height - target_height
-    width_diff = width - target_width
-
-    if height_diff > 0:
-        height_corr = abs(height_diff) // 2
-        new_img = image[height_corr: height - height_corr, :]
-        new_msk = mask[height_corr: height - height_corr, :]
-    else:
-        hpad = abs(height_diff) // 2
-        new_img = np.pad(image, ((hpad, hpad), (0, 0)),
-                         constant_values=(im_mean, im_mean))
-        new_msk = np.pad(mask, ((hpad, hpad), (0, 0)), constant_values=(0, 0))
-
-    if width_diff > 0:
-        width_corr = abs(width_diff) // 2
-        new_img = new_img[:, width_corr: width - width_corr]
-        new_msk = new_msk[:, width_corr: width - width_corr]
-    else:
-        wpad = abs(width_diff) // 2
-        new_img = np.pad(new_img, ((0, 0), (wpad, wpad)),
-                         constant_values=(im_mean, im_mean))
-        new_msk = np.pad(new_msk, ((0, 0), (wpad, wpad)),
-                         constant_values=(0, 0))
-    return new_img, new_msk
 
 
 def split_data(images, masks, valid_size=0.2):
@@ -189,9 +155,9 @@ def compute_mean_std(data_path, img_size, min_max=False):
     -------
     The mean and standard deviation of the training data
     """
-    images, masks = process_data(data_path, img_size, seed=42, shuffle=False)
-    data_dict = {"data": UNetDataset(images, masks, augment=False,
-                                     min_max=min_max)
+    images, masks = read_data(data_path, seed=42, shuffle=False)
+    data_dict = {"data": UNetDataset(images, masks, target_shape=img_size,
+                                     augment=False)
                  }
 
     # Training data will be shuffled
@@ -213,70 +179,126 @@ def compute_mean_std(data_path, img_size, min_max=False):
 class UNetDataset(Dataset):
     """ Create torch dataset instance for training"""
 
-    def __init__(self, images, masks, augment=False,
-                 min_max=False, mean=None, std=None):
+    def __init__(self, images, masks, target_shape, augment=False,
+                 mean=None, std=None):
         self.images = images
         self.masks = masks
-        self.min_max = min_max
+        self.target_shape = target_shape
         self.augment = augment
         self.mean = 0. if mean is None else mean
         self.std = 1. if std is None else std
 
     @staticmethod
-    def min_max_norm(img):
-        norm_np_img = (img - img.min()) / (img.max() - img.min())
-        norm_ten_img = torch.tensor(norm_np_img, dtype=torch.float32)
-        return norm_ten_img.unsqueeze(0)
+    def numpy_to_tensor(image, mask):
+        img_ten = torch.tensor(image, dtype=torch.float32)
+        msk_ten = torch.tensor(mask, dtype=torch.float32)
+        return img_ten, msk_ten
 
-    def custom_transform(self, image, mask):
-        # Normalize image and mask (mapping to [0, 1])
-        mask = mask / 255.0
-        image = image / 255.0
-
-        # Standardize image
-        image = (image - self.mean) / self.std
-
+    @staticmethod
+    def adjust_dims(image, mask):
         # Expand image dimension [H, W] -> [1, 1, H, W]
         exp_img = np.expand_dims(image, axis=(0, 1))
         # Expand mask dimension [H, W] -> [1, H, W]
         exp_msk = np.expand_dims(mask, axis=0)
 
-        if self.augment:
-            image_copy = exp_img.copy()
-            mask_copy = exp_msk.copy()
+        return exp_img, exp_msk
 
-            # Apply horizontal (left to right) flipping
-            image_flip = np.flip(image_copy, axis=-1)
-            mask_flip = np.flip(mask_copy, axis=-1)
+    @staticmethod
+    def custom_augment(image, mask):
+        image_copy = image.copy()
+        mask_copy = mask.copy()
 
-            # Apply brightness
-            # add a random number in between (-1, 1) from the image)
-            brightness_factor = random.uniform(-1, 1)
-            image_flip = image_flip + brightness_factor
+        # Apply horizontal (left to right) flipping
+        image_flip = np.flip(image_copy, axis=-1)
+        mask_flip = np.flip(mask_copy, axis=-1)
 
-            # Concatenate original and augmented samples
-            trans_img = np.concatenate((image_copy, image_flip), axis=0)
-            trans_msk = np.concatenate((mask_copy, mask_flip), axis=0)
+        # Apply brightness
+        # add a random number in between (-1, 1) from the image
+        brightness_factor = random.uniform(-1, 1)
+        image_bfact = image_flip + brightness_factor
 
-            # Convert numpy to float tensor
-            img_ten = torch.tensor(trans_img, dtype=torch.float32)
-            msk_ten = torch.tensor(trans_msk, dtype=torch.float32)
+        return image_bfact, mask_flip
 
-            return img_ten, msk_ten
+    def normalize(self, image, mask):
+        # Normalize image and mask (mapping to [0, 1])
+        image = image / 255.0
+        mask = mask / 255.0
+
+        # Standardize image
+        image = (image - self.mean) / self.std
+        return image, mask
+
+    def crop_pad_sample(self, image, mask, pad_value=0):
+        height, width = image.shape
+        target_height, target_width = self.target_shape
+
+        # Calculate the difference in height and width
+        height_diff = height - target_height
+        width_diff = width - target_width
+
+        # Adjust image height (crop or pad according to the target height)
+        if height_diff > 0:
+            # Cropping
+            hcorr = abs(height_diff) // 2
+            hcorr_img = image[hcorr: height - hcorr, :]
+            hcorr_msk = mask[hcorr: height - hcorr, :]
 
         else:
-            # Convert numpy to float tensor
-            img_ten = torch.tensor(exp_img, dtype=torch.float32)
-            msk_ten = torch.tensor(exp_msk, dtype=torch.float32)
+            # Padding
+            hpad = abs(height_diff) // 2
+            hcorr_img = np.full((target_height, width), pad_value,
+                                dtype=np.float32)
+            hcorr_msk = np.zeros((target_height, width), dtype=np.float32)
+            hcorr_img[hpad:hpad + height, :] = hcorr_img
+            hcorr_msk[hpad:hpad + height, :] = hcorr_msk
 
-            return img_ten, msk_ten
+        # Adjust image width (crop or pad according to the target width)
+        if width_diff > 0:
+            # Cropping
+            wcorr = abs(width_diff) // 2
+            wcorr_img = hcorr_img[:, wcorr: width - wcorr]
+            wcorr_msk = hcorr_msk[:, wcorr: width - wcorr]
+        else:
+            # Padding
+            wpad = abs(width_diff) // 2
+            wcorr_img = np.full((target_height, target_width), pad_value,
+                                dtype=np.float32)
+            wcorr_msk = np.zeros((target_height, target_width),
+                                 dtype=np.float32)
+            wcorr_img[:, wpad:wpad + width] = hcorr_img
+            wcorr_msk[:, wpad:wpad + width] = hcorr_msk
+
+        return wcorr_img, wcorr_msk
 
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, index):
-        img = self.images[index]
-        msk = self.masks[index]
-        # Apply transforms
-        img_tensor, mask_tensor = self.custom_transform(img, msk)
-        return img_tensor, mask_tensor
+        image = self.images[index]
+        mask = self.masks[index]
+
+        # Normalize and standardize the image and mask samples
+        norm_img, norm_msk = self.normalize(image, mask)
+
+        # Resize the image and mask sample according to the target shape
+        resized_img, resized_msk = self.crop_pad_sample(norm_img, norm_msk)
+
+        # Adjust dimensions of image and mask samples
+        adj_img, adj_msk = self.adjust_dims(resized_img, resized_msk)
+
+        if self.augment:
+            aug_img, aug_msk = self.custom_augment(adj_img, adj_msk)
+
+            # Concatenate original and augmented samples
+            adj_img = np.concatenate((adj_img, aug_img), axis=0)
+            adj_msk = np.concatenate((adj_msk, aug_msk), axis=0)
+
+        else:
+            # Concatenate original samples two times
+            adj_img = np.concatenate((adj_img, adj_img), axis=0)
+            adj_msk = np.concatenate((adj_msk, adj_msk), axis=0)
+
+        # Convert numpy to tensor
+        img_tensor, msk_tensor = self.numpy_to_tensor(adj_img, adj_msk)
+
+        return img_tensor, msk_tensor

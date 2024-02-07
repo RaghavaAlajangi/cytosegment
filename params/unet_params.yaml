@@ -21,7 +21,6 @@ dataset:
   # used to normalize the dataset. Otherwise, 255 will be used to divide each
   # and every image in the dataset
   img_size: [[64, 256]]
-  min_max: [False]
   augmentation: [True]
   valid_size: [0.15]
   batch_size: [8]
