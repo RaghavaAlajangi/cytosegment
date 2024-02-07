@@ -23,12 +23,8 @@ class DiceCoeff(nn.Module):
         self.sample_wise = sample_wise
 
     def forward(self, predicts, targets):
-        # Apply activation. comment out if your model contains
-        # a sigmoid or equivalent activation layer
-        predicts = torch.sigmoid(predicts)
-
-        # Sample wise metric evaluation gives different result than batch wise
-        # nearly 1.2% difference
+        # Note: Sample wise metric evaluation gives different result than
+        # batch wise nearly 1.2% difference
         if self.sample_wise:
             # Reshape predicts and targets [B, C, W, H] --> [B, C*W*H]
             predicts = predicts.view(predicts.shape[0], -1)
@@ -67,9 +63,6 @@ class IoUCoeff(nn.Module):
         self.thresh = thresh
 
     def forward(self, predicts, targets):
-        # Apply activation. comment out if your model contains
-        # a sigmoid or equivalent activation layer
-        predicts = torch.sigmoid(predicts)
         # Flatten and binarize the predictions and targets
         predicts = predicts.view(predicts.shape[0], -1) >= self.thresh
         targets = targets.view(targets.shape[0], -1) >= self.thresh
@@ -89,15 +82,12 @@ class PixelHit(nn.Module):
         self.thresh = thresh
 
     def forward(self, predicts, targets):
-        # Apply activation. comment out if your model contains
-        # a sigmoid or equivalent activation layer
-        predicts = torch.sigmoid(predicts)
         # Squeeze channel dim - (BATCH x 1 x H x W) --> (BATCH x H x W)
         if len(predicts.shape) == 4:
             predicts = predicts.squeeze(1)
         if len(targets.shape) == 4:
             targets = targets.squeeze(1)
-        # Make sure predictions and targets are binarized
+        # Binarize masks and predictions
         predicts = predicts > self.thresh
         targets = targets > self.thresh
 

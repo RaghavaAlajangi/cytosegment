@@ -73,10 +73,6 @@ class DiceLoss(nn.Module):
         self.eps = 1e-6
 
     def forward(self, predicts, targets):
-        # comment out if your model contains a sigmoid or equivalent
-        # activation layer
-        predicts = torch.sigmoid(predicts)
-
         # flatten label and prediction tensors
         predicts = predicts.view(-1)
         targets = targets.view(-1)
@@ -103,10 +99,6 @@ class DiceBCELoss(nn.Module):
         self.eps = 1e-6
 
     def forward(self, predicts, targets):
-        # comment out if your model contains a sigmoid or equivalent
-        # activation layer
-        predicts = torch.sigmoid(predicts)
-
         # flatten label and prediction tensors
         predicts = predicts.view(-1)
         targets = targets.view(-1)
@@ -133,10 +125,6 @@ class IoULoss(nn.Module):
         self.eps = 1e-6
 
     def forward(self, predicts, targets):
-        # comment out if your model contains a sigmoid or equivalent
-        # activation layer
-        predicts = torch.sigmoid(predicts)
-
         # flatten label and prediction tensors
         predicts = predicts.view(-1)
         targets = targets.view(-1)
@@ -167,10 +155,6 @@ class FocalLoss(nn.Module):
         self.eps = 1e-10
 
     def forward(self, predicts, targets):
-        # comment out if your model contains a sigmoid or equivalent
-        # activation layer
-        predicts = torch.sigmoid(predicts)
-
         # flatten label and prediction tensors
         predicts = predicts.view(-1)
         targets = targets.view(-1)
@@ -214,10 +198,6 @@ class TverskyLoss(nn.Module):
         self.eps = 1e-6
 
     def forward(self, predicts, targets):
-        # comment out if your model contains a sigmoid or equivalent
-        # activation layer
-        predicts = torch.sigmoid(predicts)
-
         # flatten label and prediction tensors
         predicts = predicts.view(-1)
         targets = targets.view(-1)
@@ -246,10 +226,6 @@ class FocalTverskyLoss(nn.Module):
         self.eps = 1e-7
 
     def forward(self, predicts, targets):
-        # comment out if your model contains a sigmoid or equivalent
-        # activation layer
-        predicts = torch.sigmoid(predicts)
-
         # flatten label and prediction tensors
         # predicts = predicts.view(-1)
         # targets = targets.view(-1)

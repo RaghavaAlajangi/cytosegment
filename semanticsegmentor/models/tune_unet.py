@@ -210,5 +210,6 @@ class TunableUNet(nn.Module):
 
         for i, decode in enumerate(self.decoder):
             x = decode(x, blocks[-i - 1])
-
-        return self.last(x)
+        logits = self.last(x)
+        out = torch.sigmoid(logits)
+        return out

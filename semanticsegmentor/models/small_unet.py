@@ -61,4 +61,5 @@ class UNet(nn.Module):
         x = self.up2(x, x2)
         x = self.up3(x, x1)
         logits = self.outc(x)
-        return logits
+        out = torch.sigmoid(logits)
+        return out
