@@ -293,11 +293,6 @@ class UNetDataset(Dataset):
             adj_img = np.concatenate((adj_img, aug_img), axis=0)
             adj_msk = np.concatenate((adj_msk, aug_msk), axis=0)
 
-        else:
-            # Concatenate original samples two times
-            adj_img = np.concatenate((adj_img, adj_img), axis=0)
-            adj_msk = np.concatenate((adj_msk, adj_msk), axis=0)
-
         # Convert numpy to tensor
         img_tensor, msk_tensor = self.numpy_to_tensor(adj_img, adj_msk)
 
