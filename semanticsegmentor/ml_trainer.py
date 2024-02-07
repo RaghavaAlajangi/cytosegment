@@ -417,7 +417,7 @@ class SetupTrainer:
                 keep_file_delete_others(org_dir, final_org_path)
                 convert_torch_to_onnx(
                     final_org_path,
-                    img_size=self.dataloaders["train"].dataset.images[0].shape
+                    img_size=self.dataloaders["train"].dataset.target_shape
                 )
 
         if len(ckp_flag_arr) > 0:
