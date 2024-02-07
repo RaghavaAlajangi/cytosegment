@@ -18,7 +18,6 @@ def get_dataloaders_with_params(params):
     assert {"data_path", "augmentation"}.issubset(dataset_params)
     assert {"valid_size", "batch_size"}.issubset(dataset_params)
     assert {"mean", "std", "num_workers"}.issubset(dataset_params)
-    assert {"min_max", "img_size"}.issubset(dataset_params)
     assert {"random_seed"}.issubset(dataset_params)
 
     data_path = dataset_params.get("data_path")
@@ -139,7 +138,7 @@ def create_dataloaders(data_dict, batch_size, num_workers=0):
     return dataloader_dict
 
 
-def compute_mean_std(data_path, img_size, min_max=False):
+def compute_mean_std(data_path, img_size):
     """ Computes the mean and standard deviation of a dataset.
     Parameters
     ----------
@@ -148,8 +147,6 @@ def compute_mean_std(data_path, img_size, min_max=False):
     img_size: tuple
         Desired image size. Image samples are padded or cropped according
         to the img_size automatically
-    min_max: bool
-        Determine whether to use the min and max
 
     Returns
     -------
