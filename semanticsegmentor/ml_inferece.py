@@ -86,8 +86,7 @@ def inference(test_dataloader, model_path, results_path, use_cuda=True,
 
         image_numpy = image_torch.squeeze(1).detach().cpu().numpy()
         mask_numpy = target_torch.squeeze(1).detach().cpu().numpy()
-        predict_numpy = torch.sigmoid(predict_torch).squeeze(
-            1).detach().cpu().numpy()
+        predict_numpy = predict_torch.squeeze(1).detach().cpu().numpy()
 
         for n in range(len(image_numpy)):
             img = image_numpy[n]
