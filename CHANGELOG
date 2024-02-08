@@ -1,4 +1,7 @@
+0.0.3
+ - enh: add inference script for divided groups
 0.0.2
+ - enh: remove sigmoid from inference
  - fix: pass target shape for onnx conversion
  - fix: remove min_max from assertion
  - fix: remove concatenation for without augmentation

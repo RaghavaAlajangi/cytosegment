@@ -20,9 +20,9 @@ from .ml_schedulers import get_scheduler_with_params
 from .ml_inferece import inference
 from .utils import convert_torch_to_onnx
 from .models import summary
+from .divided_group_inference import div_inference
 
 save_valid_results = False
-save_test_results = True
 
 
 def keep_file_delete_others(folder_path, file_to_keep):
@@ -431,17 +431,24 @@ class SetupTrainer:
                 test_results = inference(self.dataloaders["test"],
                                          final_ckp_path, self.exp_path,
                                          use_cuda=False,
-                                         save_results=save_test_results)
+                                         save_results=False)
                 train_logs["inference_cpu"] = test_results[0]
                 train_logs["test_iou_mean"] = float(test_results[1].mean())
                 train_logs["test_dice_mean"] = float(test_results[2].mean())
                 self.dump_test_scores(test_results)
+
+                # Testing divided groups with CPU device
+                div_inference(final_ckp_path, self.exp_path, use_cuda=False)
+
                 # Run inference using gpu only it is available
                 if torch.cuda.is_available():
                     test_results = inference(self.dataloaders["test"],
                                              final_ckp_path, self.exp_path,
-                                             use_cuda=True, save_results=False)
+                                             use_cuda=True, save_results=True)
                     train_logs["inference_gpu"] = test_results[0]
+
+                    # Testing divided groups with CUDA device
+                    div_inference(final_ckp_path, self.exp_path, use_cuda=False)
 
         # Plot and save results logs
         self.plot_logs(train_logs)
