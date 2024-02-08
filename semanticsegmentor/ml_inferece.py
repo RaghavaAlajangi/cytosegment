@@ -77,12 +77,6 @@ def inference(test_dataloader, model_path, results_path, use_cuda=True,
 
     if save_results:
         out_path.mkdir(parents=True, exist_ok=True)
-        fig = plt.figure(figsize=(10, 5))
-        plt.hist(dice_scores, bins=50, label="Dice Scores")
-        plt.legend()
-        fig.tight_layout()
-        fig.savefig(out_path / "dice_scores_dis.png")
-        plt.close()
 
         image_numpy = image_torch.squeeze(1).detach().cpu().numpy()
         mask_numpy = target_torch.squeeze(1).detach().cpu().numpy()
