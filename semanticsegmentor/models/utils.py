@@ -7,6 +7,13 @@ import torch.nn as nn
 import torch.nn.init as init
 
 
+def add_params_to_jit_model(model_jit_path, params_dict):
+    model = torch.jit.load(model_jit_path, map_location="cpu")
+    seq_scripted = torch.jit.script(model)
+    extra_files = {"meta": str(params_dict)}
+    torch.jit.save(seq_scripted, model_jit_path, _extra_files=extra_files)
+
+
 def convert_torch_to_onnx(torch_ckp_path, img_size):
     cuda_device = torch.device("cpu")
     ckp = torch.load(torch_ckp_path, map_location=cuda_device)
