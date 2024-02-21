@@ -1,4 +1,5 @@
 0.0.3
+ - enh: implement function to add meta data to jit model
  - ref: migrate utils submodule to helper_functions module
  - ref: move model converter to model utils
  - enh: load model along with meta data
