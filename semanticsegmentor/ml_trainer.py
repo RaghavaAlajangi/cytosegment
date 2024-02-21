@@ -18,8 +18,7 @@ from .models import get_model_with_params
 from .ml_optimizers import get_optimizer_with_params
 from .ml_schedulers import get_scheduler_with_params
 from .ml_inferece import inference
-from .utils import convert_torch_to_onnx
-from .models import summary
+from .models import convert_torch_to_onnx, summary
 from .divided_group_inference import div_inference
 
 save_valid_results = False

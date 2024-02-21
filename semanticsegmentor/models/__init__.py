@@ -1,7 +1,7 @@
 from .tune_unet import TunableUNet
 from .bench_unet import BenchmarkUNet
 from .small_unet import UNet
-from .model_utils import init_weights, summary
+from .utils import convert_torch_to_onnx, init_weights, summary
 
 
 def get_model_with_params(params):
