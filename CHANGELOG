@@ -1,4 +1,6 @@
 0.0.3
+ - enh: load model along with meta data
+ - enh: enable cuda for divided group inference
  - enh: add inference script for divided groups
 0.0.2
  - enh: remove sigmoid from inference
