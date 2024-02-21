@@ -448,7 +448,7 @@ class SetupTrainer:
                     train_logs["inference_gpu"] = test_results[0]
 
                     # Testing divided groups with CUDA device
-                    div_inference(final_ckp_path, self.exp_path, use_cuda=False)
+                    div_inference(final_ckp_path, self.exp_path, use_cuda=True)
 
         # Plot and save results logs
         self.plot_logs(train_logs)
