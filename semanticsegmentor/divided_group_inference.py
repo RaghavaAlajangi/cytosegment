@@ -44,7 +44,7 @@ def div_inference(model_path, results_path, use_cuda=True):
     mean = params_path["dataset"]["mean"]
     std = params_path["dataset"]["std"]
 
-    unet = load_model(model_path, use_cuda=use_cuda)
+    unet, unet_meta = load_model(model_path, use_cuda=use_cuda)
     device = torch.device("cuda" if use_cuda else "cpu")
 
     for fname in div_fol_path.iterdir():

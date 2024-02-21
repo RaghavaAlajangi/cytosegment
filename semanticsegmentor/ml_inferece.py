@@ -13,10 +13,13 @@ from .ml_metrics import IoUCoeff, DiceCoeff
 
 def load_model(ckp_path_jit, use_cuda):
     device = torch.device("cuda" if use_cuda else "cpu")
-    model_jit = torch.jit.load(ckp_path_jit, map_location=device)
+    ex_files = {"meta": ""}
+    model_jit = torch.jit.load(ckp_path_jit, _extra_files=ex_files,
+                               map_location=device)
+    model_meta = eval(ex_files["meta"]) if ex_files["meta"] != "" else None
     model_jit.eval()
     model_jit = torch.jit.optimize_for_inference(model_jit)
-    return model_jit
+    return model_jit, model_meta
 
 
 def inference(test_dataloader, model_path, results_path, use_cuda=True,
@@ -36,7 +39,7 @@ def inference(test_dataloader, model_path, results_path, use_cuda=True,
     ioumetric = IoUCoeff()
     dicemetric = DiceCoeff(sample_wise=True)
 
-    unet = load_model(model_path, use_cuda=use_cuda)
+    unet, unet_meta = load_model(model_path, use_cuda=use_cuda)
     device = torch.device("cuda" if use_cuda else "cpu")
 
     image_list = []
