@@ -1,4 +1,6 @@
 0.0.3
+ - ref: migrate utils submodule to helper_functions module
+ - ref: move model converter to model utils
  - enh: load model along with meta data
  - enh: enable cuda for divided group inference
  - enh: add inference script for divided groups
