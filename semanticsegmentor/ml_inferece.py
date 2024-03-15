@@ -1,3 +1,4 @@
+from ast import literal_eval as asteval
 import time
 
 import matplotlib.pyplot as plt
@@ -16,7 +17,10 @@ def load_model(ckp_path_jit, use_cuda):
     ex_files = {"meta": ""}
     model_jit = torch.jit.load(ckp_path_jit, _extra_files=ex_files,
                                map_location=device)
-    model_meta = eval(ex_files["meta"]) if ex_files["meta"] != "" else None
+    decode_meta = ex_files["meta"].decode("utf-8")
+    # Convert bytes representation to a dictionary
+    model_meta = asteval(decode_meta) if ex_files["meta"] != "" else None
+
     model_jit.eval()
     model_jit = torch.jit.optimize_for_inference(model_jit)
     return model_jit, model_meta
