@@ -164,7 +164,6 @@ class SetupTrainer:
 
     def dump_model_summary(self, model, pathout):
         images, _ = next(iter(self.dataloaders["train"]))
-        images = images.view(-1, *images.shape[2:])
         result, params_info = summary(model, tuple(images[0].shape))
         print(f"Total parameters in the model:{params_info[0]}")
         print(f"Trainable parameters in the model:{params_info[1]}")
@@ -188,8 +187,6 @@ class SetupTrainer:
         bscore = []
         # Get batch of images and labels iteratively
         for n, (images, masks) in enumerate(self.dataloaders[mode]):
-            images = images.view(-1, *images.shape[2:])
-            masks = masks.view(-1, *masks.shape[2:])
             # Pass the data to the device
             images = images.to(self.device, dtype=torch.float32)
             masks = masks.to(self.device, dtype=torch.float32)
