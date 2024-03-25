@@ -15,7 +15,7 @@ model:
 
 dataset:
   type: [PNG]
-  data_path: [data/training_testing_set_only_enrichment.zip]
+  data_path: [data/all_naiad_zmd_320_80.zip]
 #  data_path: [data/training_testing_set_w_beads_and_enrichment.zip]
   # "min_max" = True: minimum and maximum pixel values of each image will be
   # used to normalize the dataset. Otherwise, 255 will be used to divide each
@@ -47,7 +47,7 @@ dataset:
   random_seed: [42]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
-  num_workers: [0]
+  num_workers: [8]
 
 criterion:
   type: [FocalTverskyLoss]
@@ -76,13 +76,13 @@ scheduler:
   lr_decay_rate: [0.5] # Ex: after 5 epochs lr becomes 0.01*0.1 = 0.001
 
 others:
-  max_epochs: [5]
+  max_epochs: [200]
   use_cuda: [True]
   path_out: [experiments]
 
   # Trainer start saving checkpoints only after the validation
   # accuracy is higher than  'min_ckp_acc'
-  min_ckp_acc: [0.96]
+  min_ckp_acc: [0.80]
 
   # If the model metric (validation loss) starts increasing,
   # 'early stopping' will count the n consequent epochs (patience).
@@ -100,5 +100,5 @@ others:
 
 hpc_params:
   mail_id: raghava.alajangi@mpl.mpg.de
-  max_mem_GB: 5
+  max_mem_GB: 10
   max_time_hours: 00:30:00  # hh:mm:ss
