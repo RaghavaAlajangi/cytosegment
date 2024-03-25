@@ -1,3 +1,8 @@
+0.0.4
+ - enh: load model metadata safely
+ - enh: save models with metadata during training
+ - ref: make experiment names short
+ - ref: migrate to raghava's augmentation
 0.0.3
  - enh: implement function to add meta data to jit model
  - ref: migrate utils submodule to helper_functions module

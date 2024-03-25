@@ -78,8 +78,6 @@ def div_inference(model_path, results_path, use_cuda=True):
             tik = time.time()
 
             for img_batch, lbl_batch in test_dataloader:
-                img_batch = img_batch.view(-1, *img_batch.shape[2:])
-                lbl_batch = lbl_batch.view(-1, *lbl_batch.shape[2:])
                 img_batch = img_batch.to(device, dtype=torch.float32)
                 lbl_batch = lbl_batch.to(device, dtype=torch.float32)
 

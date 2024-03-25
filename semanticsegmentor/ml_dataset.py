@@ -7,6 +7,8 @@ from PIL import Image
 import torch
 from torch import mean as tmean
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms as tt
+import torchvision.transforms.functional as tf
 
 
 def get_dataloaders_with_params(params):
@@ -32,13 +34,13 @@ def get_dataloaders_with_params(params):
 
     train_data_path, test_data_path = unzip_data(data_path)
 
-    images, masks = read_data(train_data_path, seed=random_seed,
-                              shuffle=True)
+    train_images, train_masks = read_data(train_data_path, seed=random_seed,
+                                          shuffle=True)
+    test_images, test_masks = read_data(test_data_path, seed=42, shuffle=False)
 
-    train_imgs, valid_imgs, train_msks, valid_msks = split_data(images, masks,
+    train_imgs, valid_imgs, train_msks, valid_msks = split_data(train_images,
+                                                                train_masks,
                                                                 valid_size)
-
-    test_imgs, test_msks = read_data(test_data_path, seed=42, shuffle=False)
 
     # Create training dataset instance
     train_dataset = UNetDataset(train_imgs, train_msks, target_shape=img_size,
@@ -47,7 +49,7 @@ def get_dataloaders_with_params(params):
     valid_dataset = UNetDataset(valid_imgs, valid_msks, target_shape=img_size,
                                 augment=False, mean=mean, std=std)
     # Create testing dataset instance
-    test_dataset = UNetDataset(test_imgs, test_msks, target_shape=img_size,
+    test_dataset = UNetDataset(test_images, test_masks, target_shape=img_size,
                                augment=False, mean=mean, std=std)
 
     data_dict = {
@@ -177,53 +179,20 @@ class UNetDataset(Dataset):
     """ Create torch dataset instance for training"""
 
     def __init__(self, images, masks, target_shape, augment=False,
-                 mean=None, std=None):
+                 min_max=False, mean=None, std=None):
         self.images = images
         self.masks = masks
         self.target_shape = target_shape
         self.augment = augment
+        self.min_max = min_max
         self.mean = 0. if mean is None else mean
         self.std = 1. if std is None else std
 
     @staticmethod
-    def numpy_to_tensor(image, mask):
-        img_ten = torch.tensor(image, dtype=torch.float32)
-        msk_ten = torch.tensor(mask, dtype=torch.float32)
-        return img_ten, msk_ten
-
-    @staticmethod
-    def adjust_dims(image, mask):
-        # Expand image dimension [H, W] -> [1, 1, H, W]
-        exp_img = np.expand_dims(image, axis=(0, 1))
-        # Expand mask dimension [H, W] -> [1, H, W]
-        exp_msk = np.expand_dims(mask, axis=0)
-
-        return exp_img, exp_msk
-
-    @staticmethod
-    def custom_augment(image, mask):
-        image_copy = image.copy()
-        mask_copy = mask.copy()
-
-        # Apply horizontal (left to right) flipping
-        image_flip = np.flip(image_copy, axis=-1)
-        mask_flip = np.flip(mask_copy, axis=-1)
-
-        # Apply brightness
-        # add a random number in between (-1, 1) from the image
-        brightness_factor = random.uniform(-1, 1)
-        image_bfact = image_flip + brightness_factor
-
-        return image_bfact, mask_flip
-
-    def normalize(self, image, mask):
-        # Normalize image and mask (mapping to [0, 1])
-        image = image / 255.0
-        mask = mask / 255.0
-
-        # Standardize image
-        image = (image - self.mean) / self.std
-        return image, mask
+    def min_max_norm(img):
+        norm_np_img = (img - img.min()) / (img.max() - img.min())
+        norm_ten_img = torch.tensor(norm_np_img, dtype=torch.float32)
+        return norm_ten_img.unsqueeze(0)
 
     def crop_pad_sample(self, image, mask, pad_value=0):
         height, width = image.shape
@@ -267,6 +236,41 @@ class UNetDataset(Dataset):
 
         return wcorr_img, wcorr_msk
 
+    def custom_transform(self, image, mask):
+        # Instantiate normalize and to_tensor functions
+        normalize = tt.Normalize([self.mean], [self.std])
+        to_tensor = tt.ToTensor()
+
+        # Make sure mask is binary and tensor
+        mask = mask / mask.max()
+        mask = torch.tensor(mask, dtype=torch.float32)
+
+        if self.min_max:
+            image = self.min_max_norm(image)
+        else:
+            # Normalize image (divides the image with 255)
+            image = to_tensor(image.astype("uint8"))
+
+        # Standardize image with mean and std values
+        image = normalize(image)
+
+        if self.augment:
+            # Random horizontal flipping
+            if random.random() >= 0.5:
+                image = tf.hflip(image)
+                mask = tf.hflip(mask)
+            # Random vertical flipping
+            if random.random() >= 0.5:
+                image = tf.vflip(image)
+                mask = tf.vflip(mask)
+
+            # Apply brightness (add/subtract a random number from the image)
+            if random.random() >= 0.5:
+                brightness_factor = random.uniform(-1, 1)
+                image = image + brightness_factor
+
+        return image, mask
+
     def __len__(self):
         return len(self.images)
 
@@ -274,23 +278,13 @@ class UNetDataset(Dataset):
         image = self.images[index]
         mask = self.masks[index]
 
-        # Normalize and standardize the image and mask samples
-        norm_img, norm_msk = self.normalize(image, mask)
+        # Compute image mean
+        pad_value = image.mean()
 
         # Resize the image and mask sample according to the target shape
-        resized_img, resized_msk = self.crop_pad_sample(norm_img, norm_msk)
+        resized_img, resized_msk = self.crop_pad_sample(image, mask,
+                                                        pad_value=pad_value)
+        # Augmentation
+        aug_img, aug_msk = self.custom_transform(resized_img, resized_msk)
 
-        # Adjust dimensions of image and mask samples
-        adj_img, adj_msk = self.adjust_dims(resized_img, resized_msk)
-
-        if self.augment:
-            aug_img, aug_msk = self.custom_augment(adj_img, adj_msk)
-
-            # Concatenate original and augmented samples
-            adj_img = np.concatenate((adj_img, aug_img), axis=0)
-            adj_msk = np.concatenate((adj_msk, aug_msk), axis=0)
-
-        # Convert numpy to tensor
-        img_tensor, msk_tensor = self.numpy_to_tensor(adj_img, adj_msk)
-
-        return img_tensor, msk_tensor
+        return aug_img, aug_msk

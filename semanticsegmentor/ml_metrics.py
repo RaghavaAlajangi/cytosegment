@@ -31,8 +31,8 @@ class DiceCoeff(nn.Module):
             targets = targets.view(targets.shape[0], -1)
 
             # Apply thresholding
-            predicts = torch.where(predicts > self.thresh, 1.0, 0.0)
-            targets = torch.where(targets > self.thresh, 1.0, 0.0)
+            predicts = torch.where(predicts >= self.thresh, 1.0, 0.0)
+            targets = torch.where(targets >= self.thresh, 1.0, 0.0)
 
             # Compute numerator and denominator
             numerator = 2 * (predicts * targets).sum(dim=1)
@@ -46,8 +46,8 @@ class DiceCoeff(nn.Module):
             targets = targets.flatten()
 
             # Apply thresholding
-            predicts = torch.where(predicts > self.thresh, 1.0, 0.0)
-            targets = torch.where(targets > self.thresh, 1.0, 0.0)
+            predicts = torch.where(predicts >= self.thresh, 1.0, 0.0)
+            targets = torch.where(targets >= self.thresh, 1.0, 0.0)
 
             numerator = 2 * (predicts * targets).sum()
             denominator = predicts.sum() + targets.sum()

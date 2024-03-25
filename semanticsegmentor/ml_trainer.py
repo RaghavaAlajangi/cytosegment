@@ -164,7 +164,6 @@ class SetupTrainer:
 
     def dump_model_summary(self, model, pathout):
         images, _ = next(iter(self.dataloaders["train"]))
-        images = images.view(-1, *images.shape[2:])
         result, params_info = summary(model, tuple(images[0].shape))
         print(f"Total parameters in the model:{params_info[0]}")
         print(f"Trainable parameters in the model:{params_info[1]}")
@@ -188,8 +187,6 @@ class SetupTrainer:
         bscore = []
         # Get batch of images and labels iteratively
         for n, (images, masks) in enumerate(self.dataloaders[mode]):
-            images = images.view(-1, *images.shape[2:])
-            masks = masks.view(-1, *masks.shape[2:])
             # Pass the data to the device
             images = images.to(self.device, dtype=torch.float32)
             masks = masks.to(self.device, dtype=torch.float32)
@@ -282,6 +279,14 @@ class SetupTrainer:
               f"Val_loss:{val_loss:.4f} | Val_acc:{val_acc:.4f}]")
 
     def save_checkpoint(self, new_ckp_name, mode="jit"):
+        # Model meta data
+        params_dict = {
+            "image_shape": self.dataloaders["train"].dataset.target_shape,
+            "mean": self.dataloaders["train"].dataset.mean,
+            "std": self.dataloaders["train"].dataset.std,
+            "padding_ufunc": "np.mean"
+        }
+
         # make sure model is in eval mode
         model = self.model.eval()
         if mode == "jit":
@@ -290,6 +295,9 @@ class SetupTrainer:
             jit_path = str(jit_dir) + f"/{new_ckp_name}_jit.ckp"
             model_scripted = torch.jit.script(model)
             model_scripted.save(jit_path)
+
+            extra_files = {"meta": str(params_dict)}
+            torch.jit.save(model_scripted, jit_path, _extra_files=extra_files)
         else:
             torch_dir = self.ckp_path / "torch_original"
             torch_dir.mkdir(parents=True, exist_ok=True)
