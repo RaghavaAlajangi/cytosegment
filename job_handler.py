@@ -112,7 +112,7 @@ def main(slurm=False, local=False):
                 "JOB_NAME": exp_name,
                 "MAIL_ID": hpc_params["mail_id"],
                 "MAX_MEM": f"{hpc_params['max_mem_GB']:.0f}G",
-                "MAX_TIME": f"{int(hpc_params['max_time_hours']):02d}:00:00",
+                "MAX_TIME": hpc_params["max_time_hours"],
                 "PARAMS_PATH": params_path
             }
             # Update and save slurm job file
