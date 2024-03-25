@@ -198,6 +198,10 @@ class UNetDataset(Dataset):
         height, width = image.shape
         target_height, target_width = self.target_shape
 
+        # don't do cropping and padding if actual shape equal to target shape
+        if (height, width) == (target_height, target_width):
+            return image, mask
+
         # Calculate the difference in height and width
         height_diff = height - target_height
         width_diff = width - target_width

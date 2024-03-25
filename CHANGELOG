@@ -1,4 +1,5 @@
 0.0.4
+ - fix: skip crop & pad for images with target shape in dataset
  - enh: load model metadata safely
  - enh: save models with metadata during training
  - ref: make experiment names short
