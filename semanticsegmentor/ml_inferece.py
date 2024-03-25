@@ -13,16 +13,41 @@ from .ml_metrics import IoUCoeff, DiceCoeff
 
 
 def load_model(ckp_path_jit, use_cuda):
+    """ Load a PyTorch model from a JIT checkpoint file and its associated
+    metadata.
+
+    Parameters
+    ----------
+    ckp_path_jit: str or pathlib.Path
+        Load the model checkpoint
+    use_cuda: bool
+        Determine whether to use a gpu or not
+    Returns
+    -------
+    model_jit : torch.jit.ScriptModule
+        The loaded PyTorch model stored as a TorchScript module, optimized
+        for inference.
+
+    model_meta : dict or None
+        The metadata associated with the loaded model, if available.
+        If no metadata is found, returns `None`.
+    """
     device = torch.device("cuda" if use_cuda else "cpu")
-    ex_files = {"meta": ""}
-    model_jit = torch.jit.load(ckp_path_jit, _extra_files=ex_files,
+    # Define a mapping dict to load model metadata
+    extra_files = {"meta": ""}
+    # Load model and its metadata
+    model_jit = torch.jit.load(ckp_path_jit, _extra_files=extra_files,
                                map_location=device)
-    decode_meta = ex_files["meta"].decode("utf-8")
-    # Convert bytes representation to a dictionary
-    model_meta = asteval(decode_meta) if ex_files["meta"] != "" else None
+    model_meta = None
+    # check if model checkpoint has any metadata
+    if extra_files["meta"]:
+        decode_meta = extra_files["meta"].decode("utf-8")
+        # Convert bytes representation to a dictionary
+        model_meta = asteval(decode_meta)
 
     model_jit.eval()
     model_jit = torch.jit.optimize_for_inference(model_jit)
+
     return model_jit, model_meta
 
 
