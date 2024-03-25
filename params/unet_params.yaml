@@ -2,12 +2,12 @@ model:
   type: [TunableUNet]
   in_channels: [1]
   out_classes: [1]
-  conv_block: [single]
+  conv_block: [double]
   depth: [2]
-  filters: [3]
-  dilation: [1]
+  filters: [3, 4]  # 2 power filters (2**3)
+  dilation: [1]  # Options: 1 (no dilation), 2, 3, 4
   batch_norm: [True]
-  dropout: [0]                  # Options: in the range of [0.1, 0.9]
+  dropout: [0, 0.05]                  # Options: in the range of [0.1, 0.9]
   up_mode: [upconv]             # Options: upconv, upsample
   attention: [False]
   relu: [True]
@@ -20,10 +20,10 @@ dataset:
   # "min_max" = True: minimum and maximum pixel values of each image will be
   # used to normalize the dataset. Otherwise, 255 will be used to divide each
   # and every image in the dataset
-  img_size: [[64, 256]]
+  img_size: [[80,320]]
   augmentation: [True]
   valid_size: [0.15]
-  batch_size: [8]
+  batch_size: [8, 16,32]
 
   # Mean and std values for the whole dataset should be computed before
   # starting the training using 'unet/dataset_utils/compute_mean_std.py'
