@@ -12,26 +12,35 @@ main_params = yaml.safe_load(open(params_path))
 
 
 def get_exp_name(params):
-    path1 = "unet_tune_{{conv_block}}_d{{depth}}_f{{filters}}_di{{dilation}}" \
-            "_dr{{dropout}}_BN_{{batch_norm}}_{{up_mode}}_at{{attention}}_" \
-            "relu{{relu}}_{{weight_init}}_aug{{augmentation}}_" \
-            "b{{batch_size}}_al{{alpha}}_gm{{gamma}}_lr{{learn_rate}}"
-    path2 = "unet_{{weight_init}}_aug{{augmentation}}_b{{batch_size}}_" \
-            "al{{alpha}}_gm{{gamma}}_lr{{learn_rate}}"
+    # Define a mapping for conv_block values
+    conv_block_mapping = {"single": 1, "double": 2}
 
-    req_params = {**params.get("model"), **params.get("dataset"),
-                  **params.get("criterion"), **params.get("optimizer")}
+    # Define the experiment name template
+    exp_name_template = ("unet-{conv_block}-{depth}-{filters}_bsize"
+                         "{batch_size}_drop{dropout}_bnorm{batch_norm}_lr"
+                         "{learn_rate}_aug{augmentation}_relu{relu}_"
+                         "{weight_init}")
 
-    if "depth" in req_params.keys():
-        for key, val in req_params.items():
-            val = "F" if str(val) == "False" else "T" if str(
-                val) == "True" else val
-            path1 = path1.replace("{{" + key + "}}", str(val))
-        return Path(path1)
-    else:
-        for key, val in req_params.items():
-            path2 = path2.replace("{{" + key + "}}", str(val))
-        return Path(path2)
+    # Extract parameters from the params
+    parameters = {
+        "conv_block": conv_block_mapping[params["model"]["conv_block"]],
+        "depth": params["model"]["depth"],
+        "filters": 2 ** params["model"]["filters"],
+        "dropout": params["model"]["dropout"],
+        "batch_norm": "T" if params["model"]["batch_norm"] else "F",
+        "batch_size": params["dataset"]["batch_size"],
+        "learn_rate": params["optimizer"]["learn_rate"],
+        "alpha": params["criterion"]["alpha"],
+        "gamma": params["criterion"]["gamma"],
+        "dilation": params["model"]["dilation"],
+        "attention": "T" if params["model"]["attention"] else "F",
+        "relu": "T" if params["model"]["relu"] else "F",
+        "weight_init": params["model"]["weight_init"],
+        "augmentation": "T" if params["dataset"]["augmentation"] else "F"
+    }
+
+    # Fill in the template with parameter values
+    return exp_name_template.format(**parameters)
 
 
 def create_params_combinations(original_dict):
@@ -72,7 +81,7 @@ def create_params_combinations(original_dict):
 @click.option("--local", is_flag=True, help="Run jobs locally")
 def main(slurm=False, local=False):
     experiment_dicts = create_params_combinations(main_params)
-    print("="*80)
+    print("=" * 80)
     print(f"Total experiments: {len(experiment_dicts)}")
     for n, exp_dict in enumerate(experiment_dicts):
         # Create experiment name using params dict
@@ -116,7 +125,7 @@ def main(slurm=False, local=False):
             for line in slout.decode().split("\n"):
                 line = line.strip().lower()
                 if line.startswith("submitted batch job"):
-                    print(f"{n+1}) {line}")
+                    print(f"{n + 1}) {line}")
         elif local:
             sp.run(["python", "-m", "semanticsegmentor", "--params_path",
                     str(Path(params_path))], shell=True)
