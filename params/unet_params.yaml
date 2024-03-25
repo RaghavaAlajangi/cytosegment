@@ -37,13 +37,17 @@ dataset:
 #  std: [0.086]
 
   # Mean and std values for enriched dataset - without beads
-  mean: [0.487]
-  std: [0.084]
+#  mean: [0.487]
+#  std: [0.084]
+
+  # Mean and std values of Naiad data
+  mean: [ 0.519 ]
+  std: [ 0.072 ]
 
   random_seed: [42]
   # how many subprocesses to use for data loading. 0 means that the data
   # will be loaded in the main process.
-  num_workers: [8]
+  num_workers: [0]
 
 criterion:
   type: [FocalTverskyLoss]
