@@ -279,6 +279,14 @@ class SetupTrainer:
               f"Val_loss:{val_loss:.4f} | Val_acc:{val_acc:.4f}]")
 
     def save_checkpoint(self, new_ckp_name, mode="jit"):
+        # Model meta data
+        params_dict = {
+            "image_shape": self.dataloaders["train"].dataset.target_shape,
+            "mean": self.dataloaders["train"].dataset.mean,
+            "std": self.dataloaders["train"].dataset.std,
+            "padding_ufunc": "np.mean"
+        }
+
         # make sure model is in eval mode
         model = self.model.eval()
         if mode == "jit":
@@ -287,6 +295,9 @@ class SetupTrainer:
             jit_path = str(jit_dir) + f"/{new_ckp_name}_jit.ckp"
             model_scripted = torch.jit.script(model)
             model_scripted.save(jit_path)
+
+            extra_files = {"meta": str(params_dict)}
+            torch.jit.save(model_scripted, jit_path, _extra_files=extra_files)
         else:
             torch_dir = self.ckp_path / "torch_original"
             torch_dir.mkdir(parents=True, exist_ok=True)
