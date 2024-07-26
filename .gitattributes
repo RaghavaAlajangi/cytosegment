@@ -1,4 +1,5 @@
-.ckp, filter=lfs diff=lfs merge=lfs -text
+# Exclude Jupyter Notebook files from language stats
+*.ipynb linguist-detectable=false
 .pth filter=lfs diff=lfs merge=lfs -text
 .hdf5 filter=lfs diff=lfs merge=lfs -text
 .rtdc filter=lfs diff=lfs merge=lfs -text
