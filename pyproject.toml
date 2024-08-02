@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cytosegment"
+authors = [
+    {name = "Raghava Alajangi"}
+]
+description = "Semantic Segmentation package for the LC project"
+readme = "README.md"
+requires-python = ">=3.9, <4"
+keywords = ["RT-DC", "segmentation"]
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    'Intended Audience :: Science/Research'
+]
+license = {text = "None"}
+dependencies = [
+    "numpy",
+    "hydra-core==1.3.2",
+    "matplotlib",
+    "onnx",
+    "pyyaml",
+    "scikit-image",
+    "tensorboard",
+    "torch>=1.13.1",
+    "torchvision>=0.13.1"
+]
+dynamic = ["version"]
+
+[project.scripts]
+cytosegment = "cytosegment.cli.job_handler:main"
+
+[tool.setuptools]
+packages = ["cytosegment"]
+
+[tool.setuptools_scm]
+write_to = "cytosegment/_version.py"
+version_scheme = "post-release"
+
