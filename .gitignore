@@ -118,3 +118,6 @@ public
 
 _version.py
 .env*
+
+# Ignore experiments dir
+experiments
