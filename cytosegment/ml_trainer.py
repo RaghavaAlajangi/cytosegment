@@ -146,9 +146,9 @@ class SetupTrainer:
         exp_path.mkdir(parents=True, exist_ok=True)
 
         # Save session parameters as a params.yaml file
-        out_file_path = exp_path / "train_params.yaml"
-        with open(out_file_path, "w") as file:
-            yaml.dump(params, file, sort_keys=False)
+        # out_file_path = exp_path / "train_params.yaml"
+        # with open(out_file_path, "w") as file:
+        #     yaml.dump(params, file, sort_keys=False)
 
         return cls(model, dataloaders, criterion, metric, optimizer,
                    scheduler, max_epochs, use_cuda, min_ckp_acc,
