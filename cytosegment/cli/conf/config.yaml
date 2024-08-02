@@ -1,0 +1,69 @@
+defaults:
+  - model: default
+  - dataset: default
+  - training: default
+  - cluster: default
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+  - _self_
+
+
+hydra:
+  run:
+    dir: ${path_out}/${now:%d%b%y}_${now:%H-%M-%S}_singlerun
+  sweep:
+    # Output dir path
+    dir: ${path_out}/${now:%d%b%y}_${now:%H-%M-%S}_multirun
+    # Run dir path (with )
+    subdir: ${hydra.job.override_dirname}
+  job:
+    config:
+      override_dirname:
+        exclude_keys:
+          - slurm
+
+
+slurm: false
+path_out: experiments
+
+criterion:
+  type: FocalTverskyLoss
+  alpha: 0.5
+  gamma: 1.5
+
+metric:
+  type: DiceCoeff
+
+optimizer:
+  type: Adam
+  learn_rate: 0.01
+
+scheduler:
+  type: ReduceLROnPlateau
+  patience: 10
+  lr_decay_rate: 0.5
+
+others:
+  max_epochs: 200
+  use_cuda: False
+
+
+  # Trainer start saving checkpoints only after the validation
+  # accuracy is higher than  'min_ckp_acc'
+  min_ckp_acc: 0.80
+
+  # If the model metric (validation loss) starts increasing,
+  # 'early stopping' will count the n consequent epochs (patience).
+  # If still there is no improvement (after patience) training will
+  # be terminated automatically. It saves computational power by
+  # discarding the unnecessary epochs.
+  early_stop_patience: 15
+
+  # Start the training where you left by providing
+  # previous checkpoint (not jit) path
+  init_from_ckp: null
+
+  path_out: experiments
+
+  # Specify whether results should be saved with tensorboard
+  tensorboard: False

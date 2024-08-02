@@ -19,7 +19,7 @@
 # Initial tests showed about ~2:30h with bloody_bunny
 #SBATCH --time={{MAX_TIME}}
 # memory required per node. Default units are megabytes.
-#SBATCH --mem={{MAX_MEM}}
+#SBATCH --mem={{MAX_MEM}}G
 #SBATCH --mail-type=all
 #SBATCH --mail-user={{MAIL_ID}}
 
