@@ -121,3 +121,5 @@ _version.py
 
 # Ignore experiments dir
 experiments
+# Ignore data dir
+data
