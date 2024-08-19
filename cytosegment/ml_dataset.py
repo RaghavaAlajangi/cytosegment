@@ -12,17 +12,17 @@ import torchvision.transforms.functional as tf
 
 
 def get_dataloaders_with_params(params):
-    assert {"dataset"}.issubset(params)
-    dataset_params = params.get("dataset")
+    assert {"data"}.issubset(params)
+    dataset_params = params.get("data")
     assert {"type"}.issubset(dataset_params)
     # data_type = dataset_params.get("type")
 
-    assert {"data_path", "augmentation"}.issubset(dataset_params)
+    assert {"path", "augmentation"}.issubset(dataset_params)
     assert {"valid_size", "batch_size"}.issubset(dataset_params)
     assert {"mean", "std", "num_workers"}.issubset(dataset_params)
     assert {"random_seed"}.issubset(dataset_params)
 
-    data_path = dataset_params.get("data_path")
+    data_path = dataset_params.get("path")
     augmentation = dataset_params.get("augmentation")
     valid_size = dataset_params.get("valid_size")
     batch_size = dataset_params.get("batch_size")

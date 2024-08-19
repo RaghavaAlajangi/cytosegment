@@ -3,6 +3,7 @@ import torch.nn as nn
 
 
 def get_metric_with_params(params):
+    params = params.train
     assert {"metric"}.issubset(params)
     metric_params = params.get("metric")
     assert {"type"}.issubset(metric_params)

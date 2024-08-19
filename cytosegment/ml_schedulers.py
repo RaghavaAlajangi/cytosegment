@@ -2,6 +2,7 @@ from torch.optim import lr_scheduler
 
 
 def get_scheduler_with_params(params, optimizer):
+    params = params.train
     assert {"scheduler"}.issubset(params)
     scheduler_params = params.get("scheduler")
     assert {"type", "lr_decay_rate"}.issubset(scheduler_params)

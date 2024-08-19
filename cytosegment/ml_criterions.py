@@ -28,6 +28,7 @@ import torch.nn.functional as fuc
 
 
 def get_criterion_with_params(params):
+    params = params.train
     assert {"criterion"}.issubset(params)
     criterion_params = params.get("criterion")
     assert {"type"}.issubset(criterion_params)

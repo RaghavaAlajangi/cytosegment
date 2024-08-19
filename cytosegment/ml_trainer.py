@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 import time
 
@@ -94,13 +94,7 @@ class SetupTrainer:
         if init_from_ckp is not None:
             self.restore_checkpoint(init_from_ckp)
 
-        if Path(path_out).is_dir() and path_out != "experiments":
-            self.exp_path = Path(path_out)
-        else:
-            # Create a folder to store experiment results
-            time_now = datetime.now().strftime("%d_%b_%Y_%H%M%S%f")
-            self.exp_path = Path(path_out) / time_now
-            self.exp_path.mkdir(parents=True, exist_ok=True)
+        self.exp_path = Path(path_out)
 
         # Create a folder to save model checkpoints
         self.ckp_path = self.exp_path / "checkpoints"
@@ -131,29 +125,13 @@ class SetupTrainer:
         optimizer = get_optimizer_with_params(params, model)
         scheduler = get_scheduler_with_params(params, optimizer)
 
-        other_params = params.get("others")
-        max_epochs = other_params.get("max_epochs")
-        use_cuda = other_params.get("use_cuda")
-        min_ckp_acc = other_params.get("min_ckp_acc")
-        early_stop_patience = other_params.get("early_stop_patience")
-        path_out = other_params.get("path_out")
-        init_from_ckp = other_params.get("init_from_ckp")
-        tensorboard = other_params.get("tensorboard")
-
-        # Create a folder to store experiment results based on current time
-        time_now = datetime.now().strftime("%d_%b_%Y_%H%M%S%f")
-        exp_path = Path(path_out) / time_now
-        exp_path.mkdir(parents=True, exist_ok=True)
-
-        # Save session parameters as a params.yaml file
-        # out_file_path = exp_path / "train_params.yaml"
-        # with open(out_file_path, "w") as file:
-        #     yaml.dump(params, file, sort_keys=False)
-
         return cls(model, dataloaders, criterion, metric, optimizer,
-                   scheduler, max_epochs, use_cuda, min_ckp_acc,
-                   early_stop_patience, str(exp_path), tensorboard,
-                   init_from_ckp)
+                   scheduler, params.max_epochs, params.use_cuda,
+                   params.min_ckp_acc,
+                   params.early_stop_patience,
+                   params.path_out,
+                   params.tensorboard,
+                   params.init_from_ckp)
 
     def restore_checkpoint(self, ckp_path):
         ckp = torch.load(ckp_path, map_location=self.device)
