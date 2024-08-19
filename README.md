@@ -35,11 +35,11 @@ pip install -e .
 cytosegment -h
 
 # Train a model with a learning rate (single run)
-cytosegment training.optimizer.learn_rate=0.01
+cytosegment train.optimizer.learn_rate=0.01
 
 # Train a model with different learning rates (multi run)
-cytosegment -m training.optimizer.learn_rate=0.01,0.02,0.03  # with `-m` for multirun
+cytosegment -m train.optimizer.learn_rate=0.01,0.02,0.03  # with `-m` for multirun
 
 # Train a model with different learning rates on hpc (multi run)
-cytosegment -m slurm=true training.optimizer.learn_rate=0.01,0.02,0.03  # with `slurm=true` to run experiment on HPC
+cytosegment -m slurm=true train.optimizer.learn_rate=0.01,0.02,0.03  # with `slurm=true` to run experiment on HPC
 ```
