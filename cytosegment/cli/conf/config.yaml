@@ -42,7 +42,7 @@ data:
   #  path: dataset/training_testing_set_w_beads_and_enrichment.zip
 
   # Normalize input images with min-max pixel values
-  min_max: True
+  min_max: false
   img_size:
     - 80
     - 320
@@ -98,9 +98,9 @@ slurm: false
 
 path_out: experiments
 
-max_epochs: 1
+max_epochs: 200
 
-use_cuda: True
+use_cuda: false
 
 # Save model weights if 'val_acc' is greater than 'min_ckp_acc'
 min_ckp_acc: 0.80
@@ -112,4 +112,4 @@ early_stop_patience: 15
 init_from_ckp: null
 
 # Use TensorBoard for tracking
-tensorboard: False
+tensorboard: false
