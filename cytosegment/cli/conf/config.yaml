@@ -38,8 +38,8 @@ model:
 # Data configuration =========================================================
 data:
   type: png
-  path: data/all_naiad_zmd_320_80.zip
-  #  path: dataset/training_testing_set_w_beads_and_enrichment.zip
+  # This path should have '/training' and '/testing' subdirectories
+  path: data/all_naiad_zmd_320_80
 
   # Normalize input images with min-max pixel values
   min_max: false

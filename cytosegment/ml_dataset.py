@@ -1,6 +1,5 @@
 from pathlib import Path
 import random
-import zipfile
 
 import numpy as np
 from PIL import Image
@@ -22,7 +21,14 @@ def get_dataloaders_with_params(params):
     assert {"mean", "std", "num_workers"}.issubset(dataset_params)
     assert {"random_seed"}.issubset(dataset_params)
 
-    data_path = dataset_params.get("path")
+    data_path = Path(dataset_params.get("path"))
+    if not data_path.is_dir():
+        raise ValueError(
+            "The given path is not a directory. Please provide a valid "
+            "directory path that contains '/training' and '/testing' "
+            "subdirectories."
+        )
+
     augmentation = dataset_params.get("augmentation")
     valid_size = dataset_params.get("valid_size")
     batch_size = dataset_params.get("batch_size")
@@ -32,11 +38,11 @@ def get_dataloaders_with_params(params):
     num_workers = dataset_params.get("num_workers")
     random_seed = dataset_params.get("random_seed")
 
-    train_data_path, test_data_path = unzip_data(data_path)
-
-    train_images, train_masks = read_data(train_data_path, seed=random_seed,
+    train_images, train_masks = read_data(data_path / "training",
+                                          seed=random_seed,
                                           shuffle=True)
-    test_images, test_masks = read_data(test_data_path, seed=42, shuffle=False)
+    test_images, test_masks = read_data(data_path / "testing", seed=42,
+                                        shuffle=False)
 
     train_imgs, valid_imgs, train_msks, valid_msks = split_data(train_images,
                                                                 train_masks,
@@ -60,24 +66,6 @@ def get_dataloaders_with_params(params):
     # Training data will be shuffled
     dataloader_dict = create_dataloaders(data_dict, batch_size, num_workers)
     return dataloader_dict
-
-
-def unzip_data(zipped_data_path):
-    """Unzip data path and return train and test data paths"""
-
-    # Create output path from input path
-    pathout = Path(zipped_data_path).with_suffix("")
-
-    # Create train and test datasets output paths
-    train_data_path = pathout / "training"
-    test_data_path = pathout / "testing"
-
-    # Extract zipped file, if train and test dirs are not existed.
-    if not train_data_path.exists() or not test_data_path.exists():
-        with zipfile.ZipFile(zipped_data_path, "r") as zip_ref:
-            zip_ref.extractall(pathout.parents[0])
-
-    return train_data_path, test_data_path
 
 
 def read_data(data_path, seed=42, shuffle=False):
