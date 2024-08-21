@@ -2,6 +2,7 @@ from torch.optim import Adam, SGD
 
 
 def get_optimizer_with_params(params, model):
+    params = params.train
     assert {"optimizer"}.issubset(params)
     optimizer_params = params.get("optimizer")
     assert {"type", "learn_rate"}.issubset(optimizer_params)

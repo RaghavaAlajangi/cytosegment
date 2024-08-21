@@ -1,36 +1,125 @@
-# virtualenv
-venv/
-venv3/
-# Training data
-all_data/
-htmlcov/
-data_all_320/
-data/__MACOSX/
-data/training_testing_set_w_beads_and_enrichment/
-data/training_testing_set_only_enrichment/
-
-
 # Byte-compiled / optimized / DLL files
-__pycache__
-.ipynb
-.idea/
-.ipynb_checkpoints/
-semanticsegmentor.egg-info/
+__pycache__/
+*.py[cod]
+*$py.class
 
-unet.egg-info
-.env
-.coverage
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
 build/
-.pytest_cache
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Experiment dir
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Vim stuff:
+*~
+*.swp
+*.swo
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+
+_version_save.py
+
+docs/*.bib.bak
+.idea
+build-recipes/ShapeOut2Launcher.spec
+.Rhistory
+
+public
+
+_version.py
+.env*
+
+# Ignore experiments dir
 experiments
-experiments_old
-
-# Test scripts
-test.py
-testing.py
-unet/new_unet.py
-tests/data/rtdc_ds_with_img_bg_ml_scores.zip
-tests/test_cli.py
-
+# Ignore data dir
+data
