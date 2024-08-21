@@ -30,8 +30,6 @@ def create_and_submit_slurm_job(experiment_path, experiment_config, config,
     # Run arguments
     kwargs = " ".join(user_overrides)
 
-    print(config)
-
     job_dict = {
         "EXP_NAME": experiment_config.sweep.subdir,
         "PATH_OUT": config.path_out,
@@ -52,7 +50,16 @@ def create_and_submit_slurm_job(experiment_path, experiment_config, config,
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(config: DictConfig):
-    """Trains the model locally or on the cluster based on the config."""
+    """
+    This function serves as the entry point for the application, utilizing
+    Hydra's main decorator to handle command line arguments and configuration.
+
+    Parameters:
+    -----------
+    config: DictConfig
+        The configuration object containing application settings.
+    """
+
     experiment_config = HydraConfig.get()
     experiment_path = get_experiment_path(experiment_config)
     params_path = experiment_path / "run_params.yaml"
