@@ -11,15 +11,15 @@ from torch.utils.tensorboard import SummaryWriter
 import yaml
 
 from .early_stopping import EarlyStopping
-from .ml_criterions import get_criterion_with_params
-from .ml_dataset import get_dataloaders_with_params
-from .ml_metrics import get_metric_with_params
-from .models import get_model_with_params
-from .ml_optimizers import get_optimizer_with_params
-from .ml_schedulers import get_scheduler_with_params
-from .ml_inferece import inference
-from .models import convert_torch_to_onnx, summary
-from .divided_group_inference import div_inference
+from .criterions import get_criterion
+from ..dataset import get_dataloaders
+from .metrics import get_metric
+from ..models import get_model
+from .optimizers import get_optimizer
+from .schedulers import get_scheduler
+from ..ml_inferece import inference
+from ..models import convert_torch_to_onnx, summary
+from ..divided_group_inference import div_inference
 
 save_valid_results = False
 
@@ -118,12 +118,12 @@ class SetupTrainer:
 
     @classmethod
     def with_params(cls, params):
-        model = get_model_with_params(params)
-        dataloaders = get_dataloaders_with_params(params)
-        criterion = get_criterion_with_params(params)
-        metric = get_metric_with_params(params)
-        optimizer = get_optimizer_with_params(params, model)
-        scheduler = get_scheduler_with_params(params, optimizer)
+        model = get_model(params)
+        dataloaders = get_dataloaders(params)
+        criterion = get_criterion(params)
+        metric = get_metric(params)
+        optimizer = get_optimizer(params, model)
+        scheduler = get_scheduler(params, optimizer)
 
         return cls(model, dataloaders, criterion, metric, optimizer,
                    scheduler, params.max_epochs, params.use_cuda,
@@ -401,7 +401,7 @@ class SetupTrainer:
                 final_org_path = org_paths[0]
                 keep_file_delete_others(org_dir, final_org_path)
                 convert_torch_to_onnx(
-                    final_org_path,
+                    str(final_org_path),
                     img_size=self.dataloaders["train"].dataset.target_shape
                 )
 

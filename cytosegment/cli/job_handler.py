@@ -5,7 +5,7 @@ import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
-from ..ml_trainer import SetupTrainer
+from ..training import SetupTrainer
 
 slurm_tmp = Path(__file__).parent / "templates" / "slurm_template.sh"
 

@@ -27,44 +27,34 @@ import torch.nn as nn
 import torch.nn.functional as fuc
 
 
-def get_criterion_with_params(params):
-    params = params.train
-    assert {"criterion"}.issubset(params)
-    criterion_params = params.get("criterion")
-    assert {"type"}.issubset(criterion_params)
-    criterion_type = criterion_params.get("type")
+def get_criterion(config):
+    """Retrieves a criterion instance based on the provided configuration."""
+    criterion_name = config.train.criterion.name.lower()
+    alpha = config.train.criterion.alpha
+    beta = config.train.criterion.beta
+    gamma = config.train.criterion.gamma
 
-    if criterion_type.lower() == "diceloss":
+    if criterion_name == "diceloss":
         return DiceLoss()
 
-    if criterion_type.lower() == "dicebceloss":
+    if criterion_name == "dicebceloss":
         return DiceBCELoss()
 
-    if criterion_type.lower() == "iouloss":
+    if criterion_name == "iouloss":
         return IoULoss()
 
-    if criterion_type.lower() == "focalloss":
-        assert {"alpha", "gamma"}.issubset(criterion_params)
-        alpha = criterion_params.get("alpha")
-        gamma = criterion_params.get("gamma")
+    if criterion_name == "focalloss":
         return FocalLoss(alpha, gamma)
 
-    if criterion_type.lower() == "tverskytoss":
-        assert {"alpha", "beta"}.issubset(criterion_params)
-        alpha = criterion_params.get("alpha")
-        beta = criterion_params.get("beta")
+    if criterion_name == "tverskytoss":
         return TverskyLoss(alpha, beta)
 
-    if criterion_type.lower() == "focaltverskyloss":
-        assert {"alpha", "gamma"}.issubset(criterion_params)
-        alpha = criterion_params.get("alpha")
-        gamma = criterion_params.get("gamma")
+    if criterion_name == "focaltverskyloss":
         return FocalTverskyLoss(alpha, gamma)
 
 
 class DiceLoss(nn.Module):
-    """
-    Dice Loss:
+    """Dice Loss:
     The Dice coefficient, or Dice-Sørensen coefficient, is a common metric for
     pixel segmentation that can also be modified to act as a loss function
     """
@@ -86,8 +76,7 @@ class DiceLoss(nn.Module):
 
 
 class DiceBCELoss(nn.Module):
-    """
-    BCE-Dice Loss:
+    """BCE-Dice Loss:
     This loss combines Dice loss with the standard binary cross-entropy (BCE)
     loss that is generally the default for segmentation models. Combining the
     two methods allows for some diversity in the loss, while benefitting from
@@ -112,8 +101,7 @@ class DiceBCELoss(nn.Module):
 
 
 class IoULoss(nn.Module):
-    """
-    Jaccard/Intersection over Union (IoU) Loss:
+    """Jaccard/Intersection over Union (IoU) Loss:
     The IoU metric, or Jaccard Index, is similar to the Dice metric and is
     calculated as the ratio between the overlap of the positive instances
     between two sets, and their mutual combined values. Like the Dice metric,
@@ -139,8 +127,7 @@ class IoULoss(nn.Module):
 
 
 class FocalLoss(nn.Module):
-    """
-    Focal Loss:
+    """Focal Loss:
     Focal Loss was introduced by Lin et al. of Facebook AI Research
     in 2017 as a means of combatting extremely imbalanced datasets where
     positive cases were relatively rare. Their paper "Focal Loss for Dense
@@ -169,9 +156,8 @@ class FocalLoss(nn.Module):
 
 
 class TverskyLoss(nn.Module):
-    """
-    Tversky Loss This loss was introduced in "Tversky loss function for image
-    segmentationusing 3D fully convolutional deep networks", retrievable
+    """Tversky Loss This loss was introduced in "Tversky loss function for
+    image segmentationusing 3D fully convolutional deep networks", retrievable
     here: https://arxiv.org/abs/1706.05721. It was designed to optimise
     segmentation on imbalanced medical datasets by utilising constants that
     can adjust how harshly different types of error are penalised in the loss
@@ -214,23 +200,17 @@ class TverskyLoss(nn.Module):
 
 
 class FocalTverskyLoss(nn.Module):
-    """
-    Focal Tversky Loss:
-    A variant on the Tversky loss that also includes the
-    gamma modifier from Focal Loss.
-    """
+    """Focal Tversky Loss: A variant on the Tversky loss that also includes
+    the gamma modifier from Focal Loss."""
 
     def __init__(self, alpha=0.3, gamma=2):
         super(FocalTverskyLoss, self).__init__()
         self.alpha = alpha
-        self.gamma = 1/gamma
+        self.gamma = 1 / gamma
         self.eps = 1e-7
 
     def forward(self, predicts, targets):
         # flatten label and prediction tensors
-        # predicts = predicts.view(-1)
-        # targets = targets.view(-1)
-
         predicts = predicts.flatten()
         targets = targets.flatten()
 

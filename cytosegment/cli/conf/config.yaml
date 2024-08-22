@@ -72,6 +72,7 @@ train:
     name: FocalTverskyLoss
     alpha: 0.5
     gamma: 1.5
+    beta: 0.5   # For TverskyLoss
 
   metric:
     name: DiceCoeff
@@ -84,6 +85,7 @@ train:
     name: ReduceLROnPlateau
     patience: 10
     lr_decay_rate: 0.5
+    lr_step_size: 10  # For StepLR
 
 # HPC parameters =============================================================
 hpc_params:
