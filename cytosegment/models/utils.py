@@ -82,10 +82,10 @@ def init_weights(model, init_type="default", gain=0.02):
                 init.normal_(m.weight.data, 0.0, gain)
             elif init_type == "xavier":
                 init.xavier_normal_(m.weight.data, gain=gain)
-            elif init_type == "HeNormal":
+            elif init_type == "henormal":
                 init.kaiming_normal_(m.weight.data, mode="fan_in",
                                      nonlinearity="relu")
-            elif init_type == "HeUniform":
+            elif init_type == "heuniform":
                 init.kaiming_uniform_(m.weight.data, mode="fan_in",
                                       nonlinearity="relu")
             elif init_type == "orthogonal":
@@ -99,11 +99,11 @@ def init_weights(model, init_type="default", gain=0.02):
             init.normal_(m.weight.data, 1.0, gain)
             init.constant_(m.bias.data, 0.0)
 
-    print(f"Initialize network with {init_type}")
+    print(f"Initialize network with `{init_type}` initialization")
     return model.apply(init_func)
 
 
-def summary(model, input_size, batch_size=-1,device=torch.device("cpu"),
+def summary(model, input_size, batch_size=-1, device=torch.device("cpu"),
             dtypes=None):
     """Summarize the model architecture and parameters.
     Parameters

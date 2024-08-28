@@ -1,7 +1,7 @@
 from .bench_unet import BenchmarkUNet
 from .tune_unet import TunableUNet
-from .utils import (add_params_to_jit_model, convert_torch_to_onnx,
-                    init_weights, summary)
+from .utils import (add_params_to_jit_model, convert_torch_to_onnx,  # noqa
+                    init_weights, summary)  # noqa
 
 
 def get_model(config):
@@ -32,4 +32,5 @@ def get_model(config):
 
     if weight_init != "default":
         return init_weights(model, init_type=weight_init)
+    print("Initialize network with `torch default` initialization")
     return model

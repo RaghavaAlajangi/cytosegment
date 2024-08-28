@@ -4,7 +4,7 @@ import numpy as np
 class EarlyStopping:
     """EarlyStopping stops the training if validation loss does not improve
     after a given patience.
-    
+
     Parameters
     ----------
     patience: int
