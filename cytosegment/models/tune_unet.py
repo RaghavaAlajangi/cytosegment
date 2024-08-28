@@ -78,18 +78,17 @@ class EncodeBlock(nn.Module):
 class DecodeBlock(nn.Module):
     """Initialize the DecodeBlock."""
 
-    def __init__(self, in_size, out_size, up_mode="upconv", conv_block="double",
-                 dilation=1, dropout=0, batch_norm=True, activation="relu",
-                 attention=False):
+    def __init__(self, in_size, out_size, up_mode="upconv",
+                 conv_block="double", dilation=1, dropout=0, batch_norm=True,
+                 activation="relu", attention=False):
         super(DecodeBlock, self).__init__()
         self.attention = attention
         self.conv_block = EncodeBlock(in_size, out_size, conv_block, dilation,
                                       dropout, batch_norm, activation)
 
-        if self.attention:
-            self.attn_block = AttentionBlock(F_g=out_size, F_l=out_size,
-                                             F_int=out_size // 2,
-                                             activation=activation)
+        self.attn_block = AttentionBlock(F_g=out_size, F_l=out_size,
+                                         F_int=out_size // 2,
+                                         activation=activation)
 
         if up_mode == "upconv":
             self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=(2, 2),
