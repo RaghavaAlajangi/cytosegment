@@ -31,7 +31,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.scripts]
-cytosegment = "cytosegment.cli.job_handler:main"
+cytosegment = "cytosegment.cli.handler:main"
 
 [tool.setuptools]
 packages = ["cytosegment"]
