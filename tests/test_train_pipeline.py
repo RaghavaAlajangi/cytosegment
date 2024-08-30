@@ -1,5 +1,3 @@
-import pytest
-from pytest_console_scripts import script_runner
 import yaml
 
 from .helper_methods import retrieve_train_data_path

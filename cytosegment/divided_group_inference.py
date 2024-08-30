@@ -71,7 +71,7 @@ def div_inference(model_path, results_path, use_cuda=True):
                 test_dataset = UNetDataset(images, masks, target_shape,
                                            mean=mean, std=std)
 
-                test_dataloader = DataLoader(test_dataset, batch_size=8,
+                test_dl = DataLoader(test_dataset, batch_size=8,
                                              pin_memory=True)
 
                 ioumetric = IoUCoeff()
@@ -83,7 +83,7 @@ def div_inference(model_path, results_path, use_cuda=True):
 
                 tik = time.time()
 
-                for img_batch, lbl_batch in test_dataloader:
+                for img_batch, lbl_batch in test_dl:
                     img_batch = img_batch.to(device, dtype=torch.float32)
                     lbl_batch = lbl_batch.to(device, dtype=torch.float32)
 
@@ -94,7 +94,7 @@ def div_inference(model_path, results_path, use_cuda=True):
                     image_list.append(img_batch)
 
                 inference_time = time.time() - tik
-                inf_time_per_img = inference_time / len(test_dataloader.dataset)
+                inf_time_per_img = inference_time / len(test_dl.dataset)
                 if use_cuda:
                     bestmodel(outpath, [model_path, inf_time_per_img], "gpu")
                     print("Inference time (gpu)/image:", inf_time_per_img)
