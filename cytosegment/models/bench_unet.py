@@ -4,15 +4,17 @@ import torch.nn.functional as fun
 
 
 class DoubleConv(nn.Module):
-    """(CNN => BN => ReLU) * 2"""
+    """Double Convolution Block with optional intermediate channels."""
 
-    def __init__(self, in_channels, out_channels, mid_channels=None):
+    def __init__(self, **kwargs):
         super().__init__()
-        if not mid_channels:
-            mid_channels = out_channels
+        in_channels = kwargs.get("in_channels")
+        out_channels = kwargs.get("out_channels")
+        mid_channels = kwargs.get("mid_channels", out_channels)
+
         self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=(3, 3),
-                      padding=1, bias=False),
+            nn.Conv2d(in_channels, mid_channels, kernel_size=(3, 3), padding=1,
+                      bias=False),
             nn.BatchNorm2d(mid_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(mid_channels, out_channels, kernel_size=(3, 3),
@@ -21,18 +23,21 @@ class DoubleConv(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-    def forward(self, x):
-        return self.double_conv(x)
+    def forward(self, in_tensor):
+        return self.double_conv(in_tensor)
 
 
 class Down(nn.Module):
-    """Downscaling with maxpool then double conv"""
+    """Downscaling block"""
 
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, **kwargs):
         super().__init__()
+        in_channels = kwargs.get("in_channels")
+        out_channels = kwargs.get("out_channels")
+
         self.maxpool_conv = nn.Sequential(
             nn.MaxPool2d(2),
-            DoubleConv(in_channels, out_channels)
+            DoubleConv(in_channels=in_channels, out_channels=out_channels)
         )
 
     def forward(self, x):
@@ -40,40 +45,50 @@ class Down(nn.Module):
 
 
 class Up(nn.Module):
-    """Upscaling then double conv"""
+    """Upscaling block"""
 
-    def __init__(self, in_channels, out_channels, bilinear=True):
+    def __init__(self, **kwargs):
         super().__init__()
-        # if bi-linear, use the normal convolutions to reduce the number of
-        # channels
+        in_channels = kwargs.get("in_channels")
+        out_channels = kwargs.get("out_channels")
+        bilinear = kwargs.get("bilinear", True)
+
         if bilinear:
             self.up = nn.Upsample(scale_factor=2, mode="bilinear",
                                   align_corners=True)
-            self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
+            self.conv = DoubleConv(in_channels=in_channels,
+                                   out_channels=out_channels,
+                                   mid_channels=in_channels // 2)
         else:
             self.up = nn.ConvTranspose2d(in_channels, in_channels // 2,
-                                         kernel_size=(3, 3), stride=(2, 2))
-            self.conv = DoubleConv(in_channels, out_channels)
+                                         kernel_size=(2, 2), stride=(2, 2))
+            self.conv = DoubleConv(in_channels=in_channels,
+                                   out_channels=out_channels)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
-        # input is CHW
 
+        # Calculate padding
         diffY = x2.size()[2] - x1.size()[2]
         diffX = x2.size()[3] - x1.size()[3]
 
-        x1 = fun.pad(x1, [diffX // 2, diffX - diffX // 2,
-                          diffY // 2, diffY - diffY // 2])
+        # Pad x1
+        x1 = fun.pad(x1, [diffX // 2, diffX - diffX // 2, diffY // 2,
+                          diffY - diffY // 2])
 
-        # if you have padding issues, see
-        # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
+        # Concatenate and apply convolution
         x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
 
 
 class OutConv(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    """Output Convolution Block."""
+
+    def __init__(self, **kwargs):
         super(OutConv, self).__init__()
+        in_channels = kwargs.get("in_channels")
+        out_channels = kwargs.get("out_channels")
+
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=(1, 1))
 
     def forward(self, x):
@@ -81,28 +96,42 @@ class OutConv(nn.Module):
 
 
 class BenchmarkUNet(nn.Module):
-    """
-    Find the code here:
-    https://github.com/xiaopeng-liao/Pytorch-UNet
+    """U-Net architecture for image segmentation.
+
+    Parameters
+    ----------
+    in_channels : int
+        Number of input channels.
+    out_classes : int
+        Number of output classes.
+    bilinear : bool
+        If True, uses bilinear upsampling. Defaults to False.
+
+    Note:
+        Find the code here: https://github.com/xiaopeng-liao/Pytorch-UNet
     """
 
-    def __init__(self, in_channels, out_classes, bilinear=False):
+    def __init__(self, **kwargs):
         super(BenchmarkUNet, self).__init__()
-        self.n_channels = in_channels
-        self.n_classes = out_classes
-        self.bilinear = bilinear
+        in_channels = kwargs.get("in_channels", 1)
+        out_classes = kwargs.get("out_classes", 1)
+        bilinear = kwargs.get("bilinear", False)
 
-        self.inc = DoubleConv(in_channels, 64)
-        self.down1 = Down(64, 128)
-        self.down2 = Down(128, 256)
-        self.down3 = Down(256, 512)
         factor = 2 if bilinear else 1
-        self.down4 = Down(512, 1024 // factor)
-        self.up1 = Up(1024, 512 // factor, bilinear)
-        self.up2 = Up(512, 256 // factor, bilinear)
-        self.up3 = Up(256, 128 // factor, bilinear)
-        self.up4 = Up(128, 64, bilinear)
-        self.outc = OutConv(64, out_classes)
+
+        self.inc = DoubleConv(in_channels=in_channels, out_channels=64)
+        self.down1 = Down(in_channels=64, out_channels=128)
+        self.down2 = Down(in_channels=128, out_channels=256)
+        self.down3 = Down(in_channels=256, out_channels=512)
+        self.down4 = Down(in_channels=512, out_channels=1024 // factor)
+        self.up1 = Up(in_channels=1024, out_channels=512 // factor,
+                      bilinear=bilinear)
+        self.up2 = Up(in_channels=512, out_channels=256 // factor,
+                      bilinear=bilinear)
+        self.up3 = Up(in_channels=256, out_channels=128 // factor,
+                      bilinear=bilinear)
+        self.up4 = Up(in_channels=128, out_channels=64, bilinear=bilinear)
+        self.outc = OutConv(in_channels=64, out_channels=out_classes)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -115,5 +144,4 @@ class BenchmarkUNet(nn.Module):
         x = self.up3(x, x2)
         x = self.up4(x, x1)
         logits = self.outc(x)
-        out = torch.sigmoid(logits)
-        return out
+        return torch.sigmoid(logits)

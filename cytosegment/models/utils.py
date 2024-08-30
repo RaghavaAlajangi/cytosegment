@@ -15,6 +15,14 @@ def add_params_to_jit_model(model_jit_path, params_dict):
 
 
 def convert_torch_to_onnx(torch_ckp_path, img_size):
+    """Convert a PyTorch model to ONNX format.
+    Parameters
+    ----------
+    torch_ckp_path: str
+        The path to the PyTorch checkpoint file.
+    img_size: tuple
+        The size of the input image.
+    """
     cuda_device = torch.device("cpu")
     ckp = torch.load(torch_ckp_path, map_location=cuda_device)
     model = ckp["model_instance"]
@@ -49,17 +57,19 @@ def convert_torch_to_onnx(torch_ckp_path, img_size):
                                     "output": {0: "batch_size"}})
 
 
-def init_weights(net, init_type="HeNormal", gain=0.02):
-    """
-    Initializes the weights of a network.
+def init_weights(model, init_type="default", gain=0.02):
+    """ Initializes the weights of a network.
+
     Parameters
     ----------
-    net
-        Pass the network to be initialized
-    init_type
-        Specify the type of initialization to be used
-    gain
-        Scale the weights of the network
+    model: nn.Module
+        Pass the network to be initialized.
+    init_type: str
+        Specify the type of initialization to be used. Defaults to "default".
+        One of {"normal", "xavier", "HeNormal", "HeUniform", "orthogonal"}
+    gain: float
+        Scale the weights of the network.
+
     Returns
     -------
     The initialized network
@@ -72,10 +82,10 @@ def init_weights(net, init_type="HeNormal", gain=0.02):
                 init.normal_(m.weight.data, 0.0, gain)
             elif init_type == "xavier":
                 init.xavier_normal_(m.weight.data, gain=gain)
-            elif init_type == "HeNormal":
+            elif init_type == "henormal":
                 init.kaiming_normal_(m.weight.data, mode="fan_in",
                                      nonlinearity="relu")
-            elif init_type == "HeUniform":
+            elif init_type == "heuniform":
                 init.kaiming_uniform_(m.weight.data, mode="fan_in",
                                       nonlinearity="relu")
             elif init_type == "orthogonal":
@@ -89,12 +99,30 @@ def init_weights(net, init_type="HeNormal", gain=0.02):
             init.normal_(m.weight.data, 1.0, gain)
             init.constant_(m.bias.data, 0.0)
 
-    print(f"Initialize network with {init_type}")
-    return net.apply(init_func)
+    print(f"Initialize network with `{init_type}` initialization")
+    return model.apply(init_func)
 
 
-def summary(model, input_size, batch_size=-1,
-            device=torch.device("cpu"), dtypes=None):
+def summary(model, input_size, batch_size=-1, device=torch.device("cpu"),
+            dtypes=None):
+    """Summarize the model architecture and parameters.
+    Parameters
+    ----------
+    model: torch.nn.Module
+        The model to summarize.
+    input_size: tuple or list
+        The input size of the model.
+    batch_size: int
+        The batch size of the model. Defaults to -1.
+    device: torch.device
+        The device to use. Defaults to torch.device("cpu").
+    dtypes: list
+        The data types of the input. Defaults to None.
+    Returns
+    -------
+    str: A string summarizing the model architecture and parameters.
+    tuple: A tuple containing the total parameters and trainable parameters.
+    """
     # Bring model to CPU device
     model = model.cpu()
     if dtypes is None:

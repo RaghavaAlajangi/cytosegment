@@ -3,6 +3,7 @@ from pathlib import Path
 
 
 def compute_md5(file_path, characters=5):
+    """Computes the MD5 checksum of a file."""
     md5_hash = hashlib.md5()
     with open(file_path, "rb") as f:
         while chunk := f.read(8192):
@@ -12,6 +13,8 @@ def compute_md5(file_path, characters=5):
 
 
 def rename_ckp_path_with_md5(file_path, ITER=1):
+    """Rename a given file path by adding its MD5 checksum and iteration
+    number to the file name."""
     org_path = Path(file_path)
     md5_checksum = compute_md5(file_path)
     # Create file path with md5 sum

@@ -14,13 +14,13 @@ hydra:
 
 # Model configuration =========================================================
 model:
-  type: TunableUNet
+  name: TunableUNet
   in_channels: 1
   out_classes: 1
   # Options: either 'single' or 'double'
   conv_block: double
   # Model depth
-  depth: 2
+  depth: 3
   # Options: 1 to n (2**n)
   filters: 3
   # Options: 1 (no dilation), 2, 3, 4
@@ -32,12 +32,11 @@ model:
   up_mode: upconv
   attention: False
   relu: True
-  # Options: 'normal', 'xavier', 'HeNormal', 'HeUniform', 'orthogonal'
+  # Options: 'default','normal', 'xavier', 'HeNormal', 'HeUniform', 'orthogonal'
   weight_init: HeNormal
 
 # Data configuration =========================================================
 data:
-  type: png
   # This path should have '/training' and '/testing' subdirectories
   path: data/all_naiad_zmd_320_80
 
@@ -70,21 +69,23 @@ data:
 # Trainer configuration =======================================================
 train:
   criterion:
-    type: FocalTverskyLoss
+    name: FocalTverskyLoss
     alpha: 0.5
     gamma: 1.5
+    beta: 0.5   # For TverskyLoss
 
   metric:
-    type: DiceCoeff
+    name: DiceCoeff
 
   optimizer:
-    type: Adam
+    name: Adam
     learn_rate: 0.01
 
   scheduler:
-    type: ReduceLROnPlateau
+    name: ReduceLROnPlateau
     patience: 10
     lr_decay_rate: 0.5
+    lr_step_size: 10  # For StepLR
 
 # HPC parameters =============================================================
 hpc_params:
