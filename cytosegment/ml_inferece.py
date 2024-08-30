@@ -9,7 +9,7 @@ from skimage.measure import find_contours
 import torch
 import yaml
 
-from .ml_metrics import IoUCoeff, DiceCoeff
+from .training.metrics import IoUCoeff, DiceCoeff
 
 
 def load_model(ckp_path_jit, use_cuda):
@@ -53,8 +53,8 @@ def load_model(ckp_path_jit, use_cuda):
 
 def inference(test_dataloader, model_path, results_path, use_cuda=True,
               save_results=False):
-    params_path = yaml.safe_load(open(results_path / "train_params.yaml"))
-    data_path = Path(params_path["dataset"]["data_path"]).with_suffix("")
+    params_path = yaml.safe_load(open(results_path / "run_params.yaml"))
+    data_path = Path(params_path["data"]["path"]).with_suffix("")
     test_data = data_path / "testing" / "images"
 
     im_file_names = sorted([p.stem for p in Path(test_data).rglob("*.png")])

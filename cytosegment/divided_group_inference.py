@@ -1,4 +1,5 @@
 import csv
+from PIL import Image
 import time
 
 import matplotlib.patches as mpatches
@@ -7,10 +8,11 @@ import numpy as np
 from pathlib import Path
 from skimage.measure import find_contours
 import torch
+from torch.utils.data import DataLoader
 import yaml
 
-from .ml_dataset import create_dataloaders, read_data, UNetDataset
-from .ml_metrics import DiceCoeff, IoUCoeff
+from .dataset import read_data_files, UNetDataset
+from .training.metrics import DiceCoeff, IoUCoeff
 from .ml_inferece import load_model
 
 
@@ -36,13 +38,13 @@ def bestmodel(path, data, mode):
 
 
 def div_inference(model_path, results_path, use_cuda=True):
-    params_path = yaml.safe_load(open(results_path / "train_params.yaml"))
-    data_path = Path(params_path["dataset"]["data_path"]).with_suffix("")
+    params_path = yaml.safe_load(open(results_path / "run_params.yaml"))
+    data_path = Path(params_path["data"]["path"]).with_suffix("")
     div_fol_path = data_path / "testing_divided_groups"
     if div_fol_path.is_dir():
-        target_shape = params_path["dataset"]["img_size"]
-        mean = params_path["dataset"]["mean"]
-        std = params_path["dataset"]["std"]
+        target_shape = params_path["data"]["img_size"]
+        mean = params_path["data"]["mean"]
+        std = params_path["data"]["std"]
 
         unet, unet_meta = load_model(model_path, use_cuda=use_cuda)
         device = torch.device("cuda" if use_cuda else "cpu")
@@ -59,15 +61,18 @@ def div_inference(model_path, results_path, use_cuda=True):
                 outpath = results_path / fname.stem
                 outpath.mkdir(parents=True, exist_ok=True)
 
-                images, masks = read_data(fname, seed=42, shuffle=True)
+                images_files, masks_files = read_data_files(fname, seed=42,
+                                                            shuffle=False)
+                images = [np.array(Image.open(im_file)) for im_file in
+                          images_files]
+                masks = [np.array(Image.open(mk_file)) for mk_file in
+                         masks_files]
 
                 test_dataset = UNetDataset(images, masks, target_shape,
                                            mean=mean, std=std)
 
-                data_dict = {"test": test_dataset}
-                test_dataloader = create_dataloaders(data_dict,
-                                                     batch_size=8,
-                                                     num_workers=0)["test"]
+                test_dataloader = DataLoader(test_dataset, batch_size=8,
+                                             pin_memory=True)
 
                 ioumetric = IoUCoeff()
                 dicemetric = DiceCoeff(sample_wise=True)
