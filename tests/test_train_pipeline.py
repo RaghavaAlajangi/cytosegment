@@ -9,14 +9,14 @@ def test_cli(script_runner):
     """Test the cytosegment command line interface."""
     path_in = retrieve_train_data_path("test_dataset.zip") / "dataset"
     path_out = path_in / "output"
-    result = script_runner.run("cytosegment",
-                               f"data.path={str(path_in)}",
-                               f"path_out={str(path_out)}",
-                               # Test only a small model
-                               "model.depth=1", "model.filters=2",
-                               "model.conv_block=single",
-                               # Test only a small number of epochs
-                               "max_epochs=2")
+    result = script_runner.run(["cytosegment",
+                                f"data.path={str(path_in)}",
+                                f"path_out={str(path_out)}",
+                                # Test only a small model
+                                "model.depth=1", "model.filters=2",
+                                "model.conv_block=single",
+                                # Test only a small number of epochs
+                                "max_epochs=2"])
 
     assert result.success
 
