@@ -59,7 +59,7 @@ def plot_valid_results(results_path, n, image_torch, target_torch,
     plt.close(fig)
 
 
-class SetupTrainer:
+class Trainer:
     def __init__(self,
                  model,
                  dataloaders,
@@ -332,8 +332,7 @@ class SetupTrainer:
                                                               mode="train")
             val_avg_loss, val_avg_acc = self.epoch_runner(epoch, mode="valid")
             val_avg_acc_list.append(val_avg_acc)
-            dynamic_lr = [group["lr"] for group in
-                          self.optimizer.param_groups][0]
+            dynamic_lr = [pg["lr"] for pg in self.optimizer.param_groups][0]
             train_logs["epochs"] = self.max_epochs
             train_logs["dynamicLR"].append(dynamic_lr)
             train_logs["train_loss"].append(train_avg_loss)
