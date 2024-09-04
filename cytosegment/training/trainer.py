@@ -21,42 +21,12 @@ from ..ml_inferece import inference
 from ..models import convert_torch_to_onnx, summary
 from ..divided_group_inference import div_inference
 
-save_valid_results = False
-
 
 def keep_file_delete_others(folder_path, file_to_keep):
     folder_path = Path(folder_path)
     for file in folder_path.iterdir():
         if file.is_file() and file.name != Path(file_to_keep).name:
             file.unlink()
-
-
-def plot_valid_results(results_path, n, image_torch, target_torch,
-                       predict_torch):
-    results_path = results_path / "valid_results"
-    results_path.mkdir(parents=True, exist_ok=True)
-
-    img = image_torch.squeeze(1).detach().cpu().numpy()
-    msk = target_torch.squeeze(1).detach().cpu().numpy()
-    pred = torch.sigmoid(predict_torch).squeeze(1).detach().cpu().numpy()
-
-    fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(20, 6))
-    for r, row in enumerate(ax):
-        for c, col in enumerate(row):
-            if c == 0:
-                col.imshow(img[r], "gray")
-                col.set_title("img")
-                col.axis("off")
-            if c == 1:
-                col.imshow(msk[r], "gray")
-                col.set_title("msk")
-                col.axis("off")
-            if c == 2:
-                col.imshow(pred[r], "gray")
-                col.set_title("pred")
-                col.axis("off")
-    fig.savefig(results_path / f"valid_pred_at_epoch_{n}.png")
-    plt.close(fig)
 
 
 class Trainer:
@@ -153,7 +123,7 @@ class Trainer:
             for line in lines:
                 writer.writerow([line])
 
-    def epoch_runner(self, epoch, mode):
+    def epoch_runner(self, mode):
         if mode.lower() == "train":
             self.model.train()
         if mode.lower() == "valid":
@@ -189,11 +159,6 @@ class Trainer:
 
                 bwise_scores = self.metric(predicts, masks)
                 bscore.append(bwise_scores.cpu())
-
-                if save_valid_results:
-                    if mode.lower() == "valid" and n == 5:
-                        plot_valid_results(self.exp_path, epoch, images,
-                                           masks, predicts)
 
         # predict_tensor = torch.cat(predict_list, dim=0)
         # mask_tensor = torch.cat(mask_list, dim=0)
@@ -328,9 +293,8 @@ class Trainer:
         }
         start_time = time.time()
         for epoch in range(1, self.max_epochs + 1):
-            train_avg_loss, train_avg_acc = self.epoch_runner(epoch,
-                                                              mode="train")
-            val_avg_loss, val_avg_acc = self.epoch_runner(epoch, mode="valid")
+            train_avg_loss, train_avg_acc = self.epoch_runner(mode="train")
+            val_avg_loss, val_avg_acc = self.epoch_runner(mode="valid")
             val_avg_acc_list.append(val_avg_acc)
             dynamic_lr = [pg["lr"] for pg in self.optimizer.param_groups][0]
             train_logs["epochs"] = self.max_epochs
