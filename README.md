@@ -6,9 +6,6 @@ researchers and practitioners in the field of cytometry by providing
 tools for analyzing and segmenting microorganism images, such 
 as blood cells, with high accuracy.
 
-## Installation
-
-#### Install in editable mode
 
 1. Clone the project:  
 ```bash
@@ -24,11 +21,29 @@ git clone https://github.com/RaghavaAlajangi/cytosegment.git
 cd cytosegment
 ```
 
-3. Install the project in editable mode:  
+## Installation
+
+1. Before installing the package, ensure that you have the latest versions of `pip`, `setuptools`, and `wheel`:
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
+```
+
+Option 1: Install as a package:
+
+```bash
+pip install .
+```
+
+Option 2: Install from sources (editable mode)
+ 
 ```bash
 pip install -e .
 ```
-4. Data structure should be as below:
+
+## Usage
+
+1. Make sure dataset should have structure as below:
 ```bash
 dataset_root
 ├── training
@@ -50,8 +65,7 @@ dataset_root
         ├── mask2.png
         └── ...
 ```
-
-5. Usage:
+2. Run the below commands to train models: locally, on HPC, single and multi experiments
 ```bash
 # See the command line arguments:
 cytosegment -h
