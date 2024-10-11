@@ -28,11 +28,36 @@ cd cytosegment
 ```bash
 pip install -e .
 ```
+4. Data structure should be as below:
+```bash
+dataset_root
+├── training
+│   ├── images
+│   │   ├── image1.jpg
+│   │   ├── image2.jpg
+│   │   └── ...
+│   └── masks
+│       ├── mask1.png
+│       ├── mask2.png
+│       └── ...
+└── testing
+    ├── images
+    │   ├── image1.jpg
+    │   ├── image2.jpg
+    │   └── ...
+    └── masks
+        ├── mask1.png
+        ├── mask2.png
+        └── ...
+```
 
-4. Usage:
+5. Usage:
 ```bash
 # See the command line arguments:
 cytosegment -h
+
+# Train a model with a directory path (single run)
+cytosegment data.path="path/to/directory/where/training/and/testing/data/directories/are/present"
 
 # Train a model with a learning rate (single run)
 cytosegment train.optimizer.learn_rate=0.01
