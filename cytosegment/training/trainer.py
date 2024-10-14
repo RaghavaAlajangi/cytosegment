@@ -160,6 +160,8 @@ class Trainer:
             if valid_avg_acc > self.config.min_ckp_acc:
                 # Record best model and its metrics
                 if valid_avg_acc > best_valid_acc:
+                    # Used deepcopy to clone the complete object of the model
+                    # object. otherwise, we can only create a reference.
                     best_model = copy.deepcopy(self.model)
                     best_epoch = epoch
                     best_train_acc = train_avg_acc
@@ -169,9 +171,8 @@ class Trainer:
                     model_saved = False
 
                 # Save the best model if:
-                # 1. Validation accuracy is decreasing AND model has not been
-                # saved yet OR
-                # 2. It is the last epoch
+                # Validation accuracy is decreasing AND model has not been
+                # saved yet OR It is the last epoch.
                 if (valid_avg_acc < best_valid_acc and not model_saved or
                         epoch == self.config.max_epochs):
                     model_name = self.get_model_name(best_epoch,
