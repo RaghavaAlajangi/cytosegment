@@ -1,3 +1,4 @@
+import copy
 import csv
 from datetime import timedelta
 from pathlib import Path
@@ -160,6 +161,7 @@ class Trainer:
             if valid_avg_acc > self.config.min_ckp_acc:
                 # Record best model and its metrics
                 if valid_avg_acc > best_valid_acc:
+                    best_model = copy.deepcopy(self.model)
                     best_epoch = epoch
                     best_train_acc = train_avg_acc
                     best_valid_acc = valid_avg_acc
