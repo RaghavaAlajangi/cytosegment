@@ -2,9 +2,6 @@ import csv
 from datetime import timedelta
 from pathlib import Path
 import time
-import os
-
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import numpy as np
 import torch
@@ -23,64 +20,37 @@ from ..tracking import LocalTracker
 
 
 class Trainer:
-    def __init__(self,
-                 model,
-                 dataloaders,
-                 criterion,
-                 metric,
-                 optimizer,
-                 scheduler,
-                 max_epochs=100,
-                 use_cuda=False,
-                 min_ckp_acc=0.85,
-                 early_stop_patience=None,
-                 path_out="experiments"
-                 ):
-        self.model = model
-        self.dataloaders = dataloaders
-        self.criterion = criterion
-        self.metric = metric
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-        self.max_epochs = max_epochs
-        self.use_cuda = use_cuda
-        self.min_ckp_acc = min_ckp_acc
+    def __init__(self, config):
+        self.config = config
+
+        model = get_model(config)
+        self.dataloaders = get_dataloaders(config)
+        self.criterion = get_criterion(config)
+        self.metric = get_metric(config)
+        self.optimizer = get_optimizer(config, model)
+        self.scheduler = get_scheduler(config, self.optimizer)
+
+        # Check if CUDA is available and assign the device
+        self.device = torch.device(
+            "cuda" if config.use_cuda and torch.cuda.is_available() else "cpu")
+        print(f"Used device: {self.device}")
 
         # Create EarlyStop instance only if it is specified
-        if not early_stop_patience:
-            self.early_stop = EarlyStopping(early_stop_patience)
-        self.device = torch.device("cuda" if self.use_cuda else "cpu")
+        if not config.early_stop_patience:
+            self.early_stop = EarlyStopping(config.early_stop_patience)
 
-        self.exp_path = Path(path_out)
+        self.exp_path = Path(config.path_out)
 
-        self.tracker = LocalTracker(self.exp_path, min_ckp_acc)
+        self.tracker = LocalTracker(self.exp_path, config.min_ckp_acc)
 
-        if self.use_cuda:
-            self.model = model.cuda()
-            self.criterion = criterion.cuda()
-            # self.model = DataParallel(model)
+        # Log model summary
+        summary_size = config.data.img_size.copy()
+        summary_size.insert(0, 1)
+        self.tracker.log_model_summary(model, tuple(summary_size))
 
-        images, _ = next(iter(self.dataloaders["train"]))
-        self.image_shape = images[0].shape
-        self.tracker.log_model_summary(model, self.image_shape)
-
-        print(f"Training samples: {len(self.dataloaders['train'].dataset)}")
-        print(f"Validation samples: {len(self.dataloaders['valid'].dataset)}")
-
-    @classmethod
-    def with_params(cls, params):
-        model = get_model(params)
-        dataloaders = get_dataloaders(params)
-        criterion = get_criterion(params)
-        metric = get_metric(params)
-        optimizer = get_optimizer(params, model)
-        scheduler = get_scheduler(params, optimizer)
-
-        return cls(model, dataloaders, criterion, metric, optimizer,
-                   scheduler, params.max_epochs, params.use_cuda,
-                   params.min_ckp_acc,
-                   params.early_stop_patience,
-                   params.path_out)
+        # Move model and criterion to device
+        self.model = model.to(self.device)
+        self.criterion = self.criterion.to(self.device)
 
     def epoch_runner(self, mode):
         if mode.lower() == "train":
@@ -88,10 +58,8 @@ class Trainer:
         if mode.lower() == "valid":
             self.model.eval()
         loss_list = []
-        # predict_list = []
-        # mask_list = []
+        batch_scores = []
 
-        bscore = []
         # Get batch of images and labels iteratively
         for n, (images, masks) in enumerate(self.dataloaders[mode]):
             # Pass the data to the device
@@ -113,19 +81,11 @@ class Trainer:
                 del loss  # this may be the fix for my OOM error
                 loss_list.append(loss_item)
 
-                # predict_list.append(predicts)
-                # mask_list.append(masks)
-
-                bwise_scores = self.metric(predicts, masks)
-                bscore.append(bwise_scores.cpu())
-
-        # predict_tensor = torch.cat(predict_list, dim=0)
-        # mask_tensor = torch.cat(mask_list, dim=0)
-        # scores = self.metric(predict_tensor, mask_tensor)
-        # acc_avg = float(scores.mean())
+                batch_score = self.metric(predicts, masks)
+                batch_scores.append(batch_score.cpu())
 
         loss_avg = float(np.stack(loss_list).mean())
-        acc_avg = float(torch.mean(torch.stack(bscore)))
+        acc_avg = float(torch.mean(torch.stack(batch_scores)))
 
         return loss_avg, acc_avg
 
@@ -153,12 +113,10 @@ class Trainer:
         best_valid_loss = 0
         model_saved = False  # Flag to check if the best model has been saved
 
-        # Get the data sample shape
-        image_shape = self.dataloaders["train"].dataset.target_shape
-
-        # Define model metadata
+        # Define metadata that will be stored along with model checkpoint
+        # (useful for deployment)
         metadata = {
-            "image_shape": image_shape,
+            "img_size": self.config.data.img_size,
             "mean": self.dataloaders["train"].dataset.mean,
             "std": self.dataloaders["train"].dataset.std,
             "padding_ufunc": "np.mean"
@@ -168,11 +126,14 @@ class Trainer:
         for mode in ["train", "valid", "test"]:
             self.tracker.log_param(f"{mode}_samples",
                                    len(self.dataloaders[mode].dataset))
-        self.tracker.log_param("epochs", self.max_epochs)
+            print(f"{mode.capitalize()} samples: "
+                  f"{len(self.dataloaders[mode].dataset)}")
+        # Log epochs
+        self.tracker.log_param("epochs", self.config.max_epochs)
 
         start_time = time.time()
-        print("=" * 84)
-        for epoch in range(1, self.max_epochs + 1):
+        print("=" * 87)
+        for epoch in range(1, self.config.max_epochs + 1):
             train_avg_loss, train_avg_acc = self.epoch_runner(mode="train")
             valid_avg_loss, valid_avg_acc = self.epoch_runner(mode="valid")
             dynamic_lr = [pg["lr"] for pg in self.optimizer.param_groups][0]
@@ -182,7 +143,8 @@ class Trainer:
             self.tracker.log_metric("val_loss", valid_avg_loss)
             self.tracker.log_metric("val_acc", valid_avg_acc)
 
-            print(f"|Epochs-{epoch}/{self.max_epochs} | lr:{dynamic_lr}|:")
+            print(f"|Epochs-{epoch}/{self.config.max_epochs} | "
+                  f"lr:{dynamic_lr}|:")
             print(f"|Train_Loss:{train_avg_loss:.4f} | "
                   f"Train_Accuracy:{train_avg_acc:.4f} | "
                   f"Valid_Loss:{valid_avg_loss:.4f} | "
@@ -194,11 +156,10 @@ class Trainer:
             else:
                 self.scheduler.step(valid_avg_loss)
 
-            if valid_avg_acc > self.min_ckp_acc:
-
+            # Is current validation accuracy better than defined accuracy.
+            if valid_avg_acc > self.config.min_ckp_acc:
                 # Record best model and its metrics
-                if valid_avg_acc > best_valid_acc and epoch != self.max_epochs:
-                    best_model = self.model
+                if valid_avg_acc > best_valid_acc:
                     best_epoch = epoch
                     best_train_acc = train_avg_acc
                     best_valid_acc = valid_avg_acc
@@ -206,15 +167,18 @@ class Trainer:
                     # Reset flag when new best model is found
                     model_saved = False
 
-                # Save the best model only when validation accuracy is
-                # decreasing and model has not been saved yet
-                if valid_avg_acc < best_valid_acc and not model_saved:
+                # Save the best model if:
+                # 1. Validation accuracy is decreasing AND model has not been
+                # saved yet OR
+                # 2. It is the last epoch
+                if (valid_avg_acc < best_valid_acc and not model_saved or
+                        epoch == self.config.max_epochs):
                     model_name = self.get_model_name(best_epoch,
                                                      best_train_acc,
                                                      best_valid_acc)
 
                     self.tracker.log_model(best_model, model_name, metadata,
-                                           image_shape)
+                                           self.config.data.img_size)
                     self.tracker.log_metric("ckp_flags",
                                             [best_epoch, best_valid_acc,
                                              best_valid_loss])
@@ -239,7 +203,7 @@ class Trainer:
         # Reset the memory by deleting model and cache
         del self.model
         torch.cuda.empty_cache()
-        print("=" * 84)
+        print("=" * 87)
         print(f"Total training time: {train_time}")
 
         if self.tracker.best_model_path:

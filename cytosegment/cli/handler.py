@@ -72,5 +72,5 @@ def main(config: DictConfig):
         create_and_submit_slurm_job(experiment_path, experiment_config, config,
                                     params_path)
     else:
-        trainer = Trainer.with_params(config)
+        trainer = Trainer(config)
         trainer.start_train()
