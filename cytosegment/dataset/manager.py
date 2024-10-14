@@ -35,17 +35,17 @@ def get_dataloaders(config):
 
     datasets = {
         "train": UNetDataset(train_images, train_masks,
-                             target_shape=config.data.img_size,
+                             img_size=config.data.img_size,
                              augment=config.data.augmentation,
                              mean=config.data.mean,
                              std=config.data.std),
         "valid": UNetDataset(valid_images, valid_masks,
-                             target_shape=config.data.img_size,
+                             img_size=config.data.img_size,
                              augment=False,
                              mean=config.data.mean,
                              std=config.data.std),
         "test": UNetDataset(test_images, test_masks,
-                            target_shape=config.data.img_size,
+                            img_size=config.data.img_size,
                             augment=False,
                             mean=config.data.mean,
                             std=config.data.std)
@@ -64,11 +64,11 @@ def get_dataloaders(config):
 class UNetDataset(Dataset):
     """ Create torch dataset instance for training"""
 
-    def __init__(self, image_paths, maks_paths, target_shape, augment=False,
+    def __init__(self, image_paths, maks_paths, img_size, augment=False,
                  min_max=False, mean=None, std=None):
         self.image_paths = image_paths
         self.mask_paths = maks_paths
-        self.target_shape = target_shape
+        self.img_size = img_size
         self.augment = augment
         self.min_max = min_max
         self.mean = 0. if mean is None else mean
@@ -82,7 +82,7 @@ class UNetDataset(Dataset):
 
     def resize_sample(self, image, mask, pad_value=0):
         height, width = image.shape
-        target_height, target_width = self.target_shape
+        target_height, target_width = self.img_size
 
         # don't do crop and padding if actual shape equal to target shape
         if (height, width) == (target_height, target_width):
