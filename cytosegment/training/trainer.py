@@ -7,16 +7,15 @@ import time
 import numpy as np
 import torch
 
-from .early_stopping import EarlyStopping
 from .criterions import get_criterion
-from ..dataset import get_dataloaders
+from .early_stopping import EarlyStopping
 from .metrics import get_metric
-from ..models import get_model
 from .optimizers import get_optimizer
 from .schedulers import get_scheduler
-from ..ml_inferece import inference
+from ..dataset import get_dataloaders
 from ..divided_group_inference import div_inference
-
+from ..models import get_model
+from ..ml_inferece import inference
 from ..tracking import LocalTracker
 
 
