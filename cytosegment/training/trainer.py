@@ -13,10 +13,9 @@ from .metrics import get_metric
 from .optimizers import get_optimizer
 from .schedulers import get_scheduler
 from ..dataset import get_dataloaders
-from ..divided_group_inference import div_inference
 from ..models import get_model
-from ..ml_inferece import inference
 from ..tracking import LocalTracker
+from ..inferencing import StandardInference, DividedGroupInference
 
 
 class Trainer:
@@ -33,6 +32,12 @@ class Trainer:
         # Check if CUDA is available and assign the device
         self.device = torch.device(
             "cuda" if config.use_cuda and torch.cuda.is_available() else "cpu")
+
+        # Inform the user about cuda device availability
+        if config.use_cuda and not torch.cuda.is_available():
+            print("Warning: No CUDA device available. Check your "
+                  "'cuda toolkit' and 'torch (cuda)' installations!")
+
         print(f"Used device: {self.device}")
 
         # Create EarlyStop instance only if it is specified
@@ -202,42 +207,41 @@ class Trainer:
         train_time = str(timedelta(seconds=end_time)).split(".")[0]
         self.tracker.log_param("training_time", train_time)
 
-        # Reset the memory by deleting model and cache
+        # Reset the memory by deleting model, criterion, and cache
         del self.model
+        del self.criterion
         torch.cuda.empty_cache()
         print("=" * 87)
         print(f"Total training time: {train_time}")
 
         if self.tracker.best_model_path:
-            test_results = inference(self.dataloaders["test"],
-                                     self.tracker.best_model_path,
-                                     self.exp_path,
-                                     use_cuda=False,
-                                     save_results=False)
+            stand_inference = StandardInference(self.tracker.best_model_path,
+                                                self.dataloaders["test"],
+                                                self.exp_path,
+                                                use_cuda=False)
+            test_results = stand_inference.run(save_plots=True)
 
             self.tracker.log_param("inference_cpu", test_results[0])
-            self.tracker.log_param("test_iou_mean",
-                                   float(test_results[1].mean()))
-            self.tracker.log_param("test_dice_mean",
-                                   float(test_results[2].mean()))
-
-            self.dump_test_scores(test_results)
+            self.tracker.log_param("test_iou_mean", test_results[1])
+            self.tracker.log_param("test_dice_mean", test_results[2])
 
             # Testing divided groups with CPU device
-            div_inference(self.tracker.best_model_path, self.exp_path,
-                          use_cuda=False)
+            div_inference = DividedGroupInference(self.tracker.best_model_path,
+                                                  self.config,
+                                                  self.exp_path,
+                                                  use_cuda=False)
+            div_inference.run(save_plots=True)
 
             # Run inference using gpu only it is available
             if torch.cuda.is_available():
-                test_results = inference(self.dataloaders["test"],
-                                         self.tracker.best_model_path,
-                                         self.exp_path,
-                                         use_cuda=True, save_results=False)
+                stand_inference.use_cuda = True
+                test_results = stand_inference.run(save_plots=False)
+
                 self.tracker.log_param("inference_gpu", test_results[0])
 
                 # Testing divided groups with CUDA device
-                div_inference(self.tracker.best_model_path, self.exp_path,
-                              use_cuda=True)
+                div_inference.use_cuda = True
+                div_inference.run(save_plots=False)
 
         # Plot and save results logs
         self.tracker.end_run()
