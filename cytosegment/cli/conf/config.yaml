@@ -108,9 +108,3 @@ min_ckp_acc: 0.80
 
 # Stop training if 'val_acc' doesn't improve for 'early_stop_patience' epochs
 early_stop_patience: 15
-
-# Resume training from this checkpoint
-init_from_ckp: null
-
-# Use TensorBoard for tracking
-tensorboard: false

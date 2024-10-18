@@ -12,13 +12,12 @@ def compute_md5(file_path, characters=5):
     return md5_checksum[:characters]
 
 
-def rename_ckp_path_with_md5(file_path, ITER=1):
-    """Rename a given file path by adding its MD5 checksum and iteration
-    number to the file name."""
+def rename_ckp_path_with_md5(file_path):
+    """Rename a given file path by adding its MD5 checksum."""
     org_path = Path(file_path)
     md5_checksum = compute_md5(file_path)
     # Create file path with md5 sum
-    new_file_name = f"{org_path.stem}_g{ITER}_{md5_checksum}{org_path.suffix}"
+    new_file_name = f"{org_path.stem}_md5_{md5_checksum}{org_path.suffix}"
     new_file_path = org_path.parent / new_file_name
     # Rename original path with new path
     org_path.rename(new_file_path)
