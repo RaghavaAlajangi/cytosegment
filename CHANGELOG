@@ -1,6 +1,8 @@
-0.1.1:
+0.1.2
+ - ref: split the trainer class into submodules to improve readability (#5)
+0.1.1
  - ref: add dataset & training submodules (#7)
-0.1.0:
+0.1.0
  - ref: implement hydra based cli (#1 and #3)
  - ref: renamed package semanticsegmenter to cytosegment
 0.0.4
