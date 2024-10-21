@@ -1,6 +1,7 @@
 0.1.2
  - ref: split the trainer class into submodules to improve readability (#5)
  - ref: remove dump_test_scores method from trainer
+ - enh: verify image & mask pairs before training
 0.1.1
  - ref: add dataset & training submodules (#7)
 0.1.0

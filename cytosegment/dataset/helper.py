@@ -1,6 +1,36 @@
 from pathlib import Path
+from PIL import Image
 import random
 import zipfile
+
+
+def verify_image_file(file_path):
+    """Verify if the image is valid."""
+    try:
+        with Image.open(file_path) as img:
+            img.verify()
+        return True
+    except (IOError, SyntaxError) as e:
+        print(f"Excluding corrupted file: ({file_path})")
+        return False
+
+
+def intersection_of_images_and_masks(image_paths, mask_paths):
+    # Convert paths to sets of filenames for intersection
+    image_filenames = {img.stem for img in
+                       image_paths}  # .stem gets the filename without extension
+    mask_filenames = {mask.stem for mask in mask_paths}
+
+    # Find the common files (intersection)
+    common_filenames = image_filenames & mask_filenames
+
+    # Filter the images and masks based on the intersection
+    filtered_images = [img for img in image_paths if
+                       img.stem in common_filenames]
+    filtered_masks = [mask for mask in mask_paths if
+                      mask.stem in common_filenames]
+
+    return filtered_images, filtered_masks
 
 
 def read_data_files(data_path, seed=42, shuffle=False):
@@ -11,7 +41,17 @@ def read_data_files(data_path, seed=42, shuffle=False):
     image_paths = sorted([p for p in image_dir.rglob("*.png") if p.is_file()])
     mask_paths = sorted([p for p in mask_dir.rglob("*.png") if p.is_file()])
 
-    assert len(image_paths) == len(mask_paths)
+    # Verify and filter corrupted files
+    valid_img_list = [img for img in image_paths if verify_image_file(img)]
+    valid_msk_list = [msk for msk in mask_paths if verify_image_file(msk)]
+
+    if len(valid_img_list) != len(valid_msk_list):
+        print(f"Warning: After verification, the number of valid images "
+              f"({len(valid_img_list)}) and masks ({len(valid_msk_list)}) is "
+              f"different.")
+        valid_img_list, valid_msk_list = intersection_of_images_and_masks(
+            valid_img_list, valid_msk_list)
+        print(f"Using {len(valid_img_list)} common valid images and masks.")
 
     if shuffle:
         random.seed(seed)
