@@ -94,17 +94,6 @@ class Trainer:
 
         return loss_avg, acc_avg
 
-    def dump_test_scores(self, scores):
-        score_dict = {
-            "img_path": scores[-1],
-            "iou_scores": scores[1],
-            "dice_scores": scores[2]
-        }
-        with open(self.exp_path / "test_scores.csv", "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(score_dict.keys())
-            writer.writerows(zip(*score_dict.values()))
-
     @staticmethod
     def get_model_name(epoch, train_acc, valid_acc):
         return (f"E{epoch}_trainAcc_{int(train_acc * 1e4)}_"
