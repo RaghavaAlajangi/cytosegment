@@ -2,6 +2,7 @@
  - ref: split the trainer class into submodules to improve readability (#5)
  - ref: remove dump_test_scores method from trainer
  - enh: verify image & mask pairs before training
+ - fix: run divided group inference only when data dir available
 0.1.1
  - ref: add dataset & training submodules (#7)
 0.1.0

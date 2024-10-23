@@ -16,6 +16,9 @@ class DividedGroupInference(BaseInference):
         """Run inferencing with divided groups."""
         test_div_path = Path(self.config.data.path) / "testing_divided_groups"
 
+        if not test_div_path.is_dir():
+            return None
+
         for div_dir in test_div_path.iterdir():
             if not (div_dir / "images").is_dir():
                 continue
