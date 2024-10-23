@@ -3,6 +3,7 @@
  - ref: remove dump_test_scores method from trainer
  - enh: verify image & mask pairs before training
  - fix: run divided group inference only when data dir available
+ - enh: exclude data.path from output dir name
 0.1.1
  - ref: add dataset & training submodules (#7)
 0.1.0
