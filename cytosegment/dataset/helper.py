@@ -10,15 +10,15 @@ def verify_image_file(file_path):
         with Image.open(file_path) as img:
             img.verify()
         return True
-    except (IOError, SyntaxError) as e:
+    except (IOError, SyntaxError):
         print(f"Excluding corrupted file: ({file_path})")
         return False
 
 
 def intersection_of_images_and_masks(image_paths, mask_paths):
     # Convert paths to sets of filenames for intersection
-    image_filenames = {img.stem for img in
-                       image_paths}  # .stem gets the filename without extension
+    # .stem gets the filename without extension
+    image_filenames = {img.stem for img in image_paths}
     mask_filenames = {mask.stem for mask in mask_paths}
 
     # Find the common files (intersection)
