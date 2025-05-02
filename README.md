@@ -1,84 +1,121 @@
 # CytoSegment
 
-This Python library is designed for the semantic segmentation of cytometry 
-image data using advanced deep learning techniques. It is tailored to assist 
-researchers and practitioners in the field of cytometry by providing 
-tools for analyzing and segmenting microorganism images, such 
-as blood cells, with high accuracy.
+**CytoSegment** is a Python library for **semantic segmentation** of cytometry image data using deep learning. It is designed to support researchers and practitioners working with microscopic biological imagery—especially blood cells—by providing reliable tools for training, evaluating, and deploying segmentation models.
 
+---
 
-1. Clone the project:  
-```bash
-git clone git@github.com:RaghavaAlajangi/cytosegment.git
+## Features
 
-or 
+* Deep learning-based semantic segmentation
+* Easy-to-use CLI for local or HPC training
+* Supports multi-run experiments with parameter sweeps
+* Optimized for cytometry and microorganism image datasets
 
-git clone https://github.com/RaghavaAlajangi/cytosegment.git
-```
-
-2. Go to the project directory:
-```bash
-cd cytosegment
-```
+---
 
 ## Installation
 
-1. Before installing the package, ensure that you have the latest versions of `pip`, `setuptools`, and `wheel`:
+1. **Clone the repository**:
+
+```bash
+git clone https://github.com/RaghavaAlajangi/cytosegment.git
+cd cytosegment
+```
+
+2. **Upgrade core Python packaging tools**:
 
 ```bash
 python -m pip install --upgrade pip setuptools wheel
 ```
 
-Option 1: Install as a package:
+3. **Install the package**:
+
+**Option 1: Standard installation**
 
 ```bash
 pip install .
 ```
 
-Option 2: Install from sources (editable mode)
- 
+**Option 2: Editable/development mode**
+
 ```bash
 pip install -e .
 ```
 
-## Usage
+---
 
-1. Make sure dataset should have structure as below:
-```bash
-dataset_root
-├── training
-│   ├── images
+## Dataset Structure
+
+Organize your dataset as follows:
+
+```
+dataset_root/
+├── training/
+│   ├── images/
 │   │   ├── image1.jpg
-│   │   ├── image2.jpg
 │   │   └── ...
-│   └── masks
+│   └── masks/
 │       ├── mask1.png
-│       ├── mask2.png
 │       └── ...
-└── testing
-    ├── images
+└── testing/
+    ├── images/
     │   ├── image1.jpg
-    │   ├── image2.jpg
     │   └── ...
-    └── masks
+    └── masks/
         ├── mask1.png
-        ├── mask2.png
         └── ...
 ```
-2. Run the below commands to train models: locally, on HPC, single and multi experiments
+
+---
+
+## Usage
+
+Run training jobs with simple CLI commands:
+
+#### View CLI options
+
 ```bash
-# See the command line arguments:
 cytosegment -h
-
-# Train a model with a directory path (single run)
-cytosegment data.path="path/to/directory/where/training/and/testing/data/directories/are/present"
-
-# Train a model with a learning rate (single run)
-cytosegment train.optimizer.learn_rate=0.01
-
-# Train a model with different learning rates (multi run)
-cytosegment -m train.optimizer.learn_rate=0.01,0.02,0.03  # with `-m` for multirun
-
-# Train a model with different learning rates on hpc (multi run)
-cytosegment -m slurm=true train.optimizer.learn_rate=0.01,0.02,0.03  # with `slurm=true` to run experiment on HPC
 ```
+
+#### Run a single training session
+
+```bash
+cytosegment data.path="path/to/dataset_root"
+```
+
+#### Customize training (example: learning rate)
+
+```bash
+cytosegment train.optimizer.learn_rate=0.01
+```
+
+#### Perform multiple runs with different learning rates
+
+```bash
+cytosegment -m train.optimizer.learn_rate=0.01,0.02,0.03
+```
+
+#### Run multi-experiments on HPC with SLURM
+
+```bash
+cytosegment -m slurm=true train.optimizer.learn_rate=0.01,0.02,0.03
+```
+
+---
+
+## Documentation
+
+Full documentation (with training workflows, architecture, and evaluation metrics) is coming soon.
+
+---
+
+## Contributing
+
+Feel free to open issues or submit pull requests. Contributions are welcome!
+
+---
+
+## License
+
+GPL-3.0 license
