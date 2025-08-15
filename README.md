@@ -117,7 +117,7 @@ cytosegment -m slurm=true train.optimizer.learn_rate=0.01,0.02,0.03
 
 ## 📚 Documentation
 
-Paper: [Cytometry Part A (2025)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)
+Paper: [Cytometry Part A (2025)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)  
 Code: [Original GitHub Repo](https://github.com/RaghavaAlajangi/CytoSegment-PyTorch)
 
 ---
