@@ -5,7 +5,7 @@
 
 ---
 
-## Features
+## 🚀 Features
 
 * Deep learning-based semantic segmentation
 * Easy-to-use CLI for local or HPC training
@@ -44,38 +44,26 @@ year = {2025}
 ```
 
 
-## Installation
-
-1. **Clone the repository**:
+## 📦 Installation
 
 ```bash
+# Clone repo
 git clone https://github.com/RaghavaAlajangi/cytosegment.git
 cd cytosegment
-```
 
-2. **Upgrade core Python packaging tools**:
-
-```bash
+# Upgrade pip tools
 python -m pip install --upgrade pip setuptools wheel
-```
 
-3. **Install the package**:
-
-**Option 1: Standard installation**
-
-```bash
+# Install (standard)
 pip install .
-```
 
-**Option 2: Editable/development mode**
-
-```bash
+# Or install in development mode
 pip install -e .
 ```
 
 ---
 
-## Dataset Structure
+## 🗂 Dataset Structure
 
 Organize your dataset as follows:
 
@@ -99,54 +87,42 @@ dataset_root/
 
 ---
 
-## Usage
+## ⚡ Quick Start
 
 Run training jobs with simple CLI commands:
 
-#### View CLI options
-
 ```bash
+# View CLI options
 cytosegment -h
-```
 
-#### Run a single training session
-
-```bash
+# Run a single training session
 cytosegment data.path="path/to/dataset_root"
-```
 
-#### Customize training (example: learning rate)
-
-```bash
+# Customize learning rate
 cytosegment train.optimizer.learn_rate=0.01
-```
 
-#### Perform multiple runs with different learning rates
-
-```bash
+# Multi-run experiments
 cytosegment -m train.optimizer.learn_rate=0.01,0.02,0.03
-```
 
-#### Run multi-experiments on HPC with SLURM
-
-```bash
+# Multi-run on HPC (SLURM)
 cytosegment -m slurm=true train.optimizer.learn_rate=0.01,0.02,0.03
 ```
 
 ---
 
-## Documentation
+## 📚 Documentation
 
-Full documentation (with training workflows, architecture, and evaluation metrics) is coming soon.
+Paper: [Cytometry Part A (2025)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)
+Code: [Original GitHub Repo](https://github.com/RaghavaAlajangi/CytoSegment-PyTorch)
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Feel free to open issues or submit pull requests. Contributions are welcome!
 
 ---
 
-## License
+## 📜 License
 
 GPL-3.0 license
