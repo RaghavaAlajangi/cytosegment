@@ -1,5 +1,10 @@
-[![DOI](https://zenodo.org/badge/DOI/10.1002/cyto.a.24947.svg)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)
 # CytoSegment
+
+
+[![Pipeline](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml/badge.svg)](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml)_
+[![codecov](https://codecov.io/gh/OWNER/REPO/branch/main/graph/badge.svg)](https://codecov.io/gh/OWNER/REPO)_
+[![DOI](https://zenodo.org/badge/DOI/10.1002/cyto.a.24947.svg)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)
+
 
 **CytoSegment** is a Python library for **semantic segmentation** of cytometry image data using deep learning. It is designed to support researchers and practitioners working with microscopic biological imagery—especially blood cells—by providing reliable tools for training, evaluating, and deploying segmentation models.
 
@@ -14,7 +19,7 @@
 
 ---
 
-## Citation
+## 📄 Citation
 
 If you use **cytosegment** in your research or work, please cite our paper:
 
