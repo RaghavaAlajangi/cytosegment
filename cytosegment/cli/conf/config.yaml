@@ -10,7 +10,7 @@ hydra:
     config:
       override_dirname:
         exclude_keys:
-          - # Don't include these keys in the output dir name
+          # Don't include these keys in the output dir name
           - data.path
           - slurm
 
