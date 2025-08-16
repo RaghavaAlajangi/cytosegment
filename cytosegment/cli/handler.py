@@ -19,8 +19,9 @@ def get_experiment_path(experiment_config):
     )
 
 
-def create_and_submit_slurm_job(experiment_path, experiment_config, config,
-                                params_path):
+def create_and_submit_slurm_job(
+    experiment_path, experiment_config, config, params_path
+):
     """Creates and submits a SLURM job for the specified experiment."""
     slurm_dir = experiment_path / "slurm_logs"
     slurm_dir.mkdir(parents=True, exist_ok=True)
@@ -39,7 +40,7 @@ def create_and_submit_slurm_job(experiment_path, experiment_config, config,
         "MAX_MEM": int(config.hpc.max_mem_GB),
         "MAX_TIME": config.hpc.max_time_hours,
         "PARAMS_PATH": params_path,
-        "KWARGS": kwargs
+        "KWARGS": kwargs,
     }
     slurm_file = (slurm_tmp.read_text()).format(**job_dict)
     slurm_path.write_text(slurm_file)
@@ -69,8 +70,9 @@ def main(config: DictConfig):
     OmegaConf.save(config, params_path)
 
     if config.slurm:
-        create_and_submit_slurm_job(experiment_path, experiment_config, config,
-                                    params_path)
+        create_and_submit_slurm_job(
+            experiment_path, experiment_config, config, params_path
+        )
     else:
         trainer = Trainer(config)
         trainer.start_train()

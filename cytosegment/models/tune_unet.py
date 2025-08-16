@@ -9,27 +9,48 @@ class AttentionBlock(nn.Module):
     def __init__(self, F_g, F_l, F_int, activation="relu"):
         super(AttentionBlock, self).__init__()
         self.W_g = nn.Sequential(
-            nn.Conv2d(F_g, F_int, kernel_size=(1, 1), stride=(1, 1), padding=0,
-                      bias=True),
-            nn.BatchNorm2d(F_int)
+            nn.Conv2d(
+                F_g,
+                F_int,
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=0,
+                bias=True,
+            ),
+            nn.BatchNorm2d(F_int),
         )
 
         self.W_x = nn.Sequential(
-            nn.Conv2d(F_l, F_int, kernel_size=(1, 1), stride=(1, 1), padding=0,
-                      bias=True),
-            nn.BatchNorm2d(F_int)
+            nn.Conv2d(
+                F_l,
+                F_int,
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=0,
+                bias=True,
+            ),
+            nn.BatchNorm2d(F_int),
         )
 
         self.psi = nn.Sequential(
-            nn.Conv2d(F_int, 1, kernel_size=(1, 1), stride=(1, 1), padding=0,
-                      bias=True),
+            nn.Conv2d(
+                F_int,
+                1,
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=0,
+                bias=True,
+            ),
             nn.BatchNorm2d(1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
         # Select the activation function
-        self.activation = nn.ReLU(inplace=True) if activation == "relu" \
+        self.activation = (
+            nn.ReLU(inplace=True)
+            if activation == "relu"
             else nn.LeakyReLU(0.1, inplace=True)
+        )
 
     def forward(self, g, x):
         g1 = self.W_g(g)
@@ -42,17 +63,33 @@ class AttentionBlock(nn.Module):
 class EncodeBlock(nn.Module):
     """Initializes the EncodeBlock"""
 
-    def __init__(self, in_size, out_size, conv_block="double", dilation=1,
-                 dropout=0, batch_norm=True, activation="relu"):
+    def __init__(
+        self,
+        in_size,
+        out_size,
+        conv_block="double",
+        dilation=1,
+        dropout=0,
+        batch_norm=True,
+        activation="relu",
+    ):
         super(EncodeBlock, self).__init__()
         # Create dilation kernel
         dilation_kernel = (dilation, dilation)
-        activation_fuc = nn.ReLU(inplace=True) if activation == "relu" \
+        activation_fuc = (
+            nn.ReLU(inplace=True)
+            if activation == "relu"
             else nn.LeakyReLU(0.1, inplace=True)
+        )
 
         block = [
-            nn.Conv2d(in_size, out_size, kernel_size=(3, 3), padding=dilation,
-                      dilation=dilation_kernel)
+            nn.Conv2d(
+                in_size,
+                out_size,
+                kernel_size=(3, 3),
+                padding=dilation,
+                dilation=dilation_kernel,
+            )
         ]
 
         if batch_norm:
@@ -60,8 +97,15 @@ class EncodeBlock(nn.Module):
         block.append(activation_fuc)
 
         if conv_block == "double":
-            block.append(nn.Conv2d(out_size, out_size, kernel_size=(3, 3),
-                                   padding=dilation, dilation=dilation_kernel))
+            block.append(
+                nn.Conv2d(
+                    out_size,
+                    out_size,
+                    kernel_size=(3, 3),
+                    padding=dilation,
+                    dilation=dilation_kernel,
+                )
+            )
             if batch_norm:
                 block.append(nn.BatchNorm2d(out_size))
             block.append(activation_fuc)
@@ -78,25 +122,46 @@ class EncodeBlock(nn.Module):
 class DecodeBlock(nn.Module):
     """Initialize the DecodeBlock."""
 
-    def __init__(self, in_size, out_size, up_mode="upconv",
-                 conv_block="double", dilation=1, dropout=0, batch_norm=True,
-                 activation="relu", attention=False):
+    def __init__(
+        self,
+        in_size,
+        out_size,
+        up_mode="upconv",
+        conv_block="double",
+        dilation=1,
+        dropout=0,
+        batch_norm=True,
+        activation="relu",
+        attention=False,
+    ):
         super(DecodeBlock, self).__init__()
         self.attention = attention
-        self.conv_block = EncodeBlock(in_size, out_size, conv_block, dilation,
-                                      dropout, batch_norm, activation)
+        self.conv_block = EncodeBlock(
+            in_size,
+            out_size,
+            conv_block,
+            dilation,
+            dropout,
+            batch_norm,
+            activation,
+        )
 
-        self.attn_block = AttentionBlock(F_g=out_size, F_l=out_size,
-                                         F_int=out_size // 2,
-                                         activation=activation)
+        self.attn_block = AttentionBlock(
+            F_g=out_size,
+            F_l=out_size,
+            F_int=out_size // 2,
+            activation=activation,
+        )
 
         if up_mode == "upconv":
-            self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=(2, 2),
-                                         stride=(2, 2))
+            self.up = nn.ConvTranspose2d(
+                in_size, out_size, kernel_size=(2, 2), stride=(2, 2)
+            )
         elif up_mode == "upsample":
             self.up = nn.Sequential(
-                nn.Upsample(mode="bilinear", scale_factor=2,
-                            align_corners=True),
+                nn.Upsample(
+                    mode="bilinear", scale_factor=2, align_corners=True
+                ),
                 nn.Conv2d(in_size, out_size, kernel_size=(1, 1)),
             )
 
@@ -158,7 +223,7 @@ class TunableUNet(nn.Module):
             "up_mode": "upconv",
             "batch_norm": True,
             "attention": False,
-            "activation": "relu"
+            "activation": "relu",
         }
         # Update parameters with provided arguments
         params.update(kwargs)
@@ -170,9 +235,15 @@ class TunableUNet(nn.Module):
         for i in range(params["depth"] + 1):
             out_channels = 2 ** (params["filters"] + i)
             self.encoder.append(
-                EncodeBlock(prev_channels, out_channels, params["conv_block"],
-                            params["dilation"], params["dropout"],
-                            params["batch_norm"], params["activation"])
+                EncodeBlock(
+                    prev_channels,
+                    out_channels,
+                    params["conv_block"],
+                    params["dilation"],
+                    params["dropout"],
+                    params["batch_norm"],
+                    params["activation"],
+                )
             )
             prev_channels = out_channels
 
@@ -181,16 +252,24 @@ class TunableUNet(nn.Module):
         for i in reversed(range(params["depth"])):
             out_channels = 2 ** (params["filters"] + i)
             self.decoder.append(
-                DecodeBlock(prev_channels, out_channels, params["up_mode"],
-                            params["conv_block"], params["dilation"],
-                            params["dropout"], params["batch_norm"],
-                            params["activation"], params["attention"])
+                DecodeBlock(
+                    prev_channels,
+                    out_channels,
+                    params["up_mode"],
+                    params["conv_block"],
+                    params["dilation"],
+                    params["dropout"],
+                    params["batch_norm"],
+                    params["activation"],
+                    params["attention"],
+                )
             )
             prev_channels = out_channels
 
         # Final convolutional layer
-        self.last = nn.Conv2d(prev_channels, params["out_classes"],
-                              kernel_size=(1, 1))
+        self.last = nn.Conv2d(
+            prev_channels, params["out_classes"], kernel_size=(1, 1)
+        )
 
     def forward(self, in_tensor):
         blocks = []

@@ -2,8 +2,8 @@ from pathlib import Path
 
 from torch.utils.data import DataLoader
 
+from ..dataset import UNetDataset, read_data_files
 from .base import BaseInference
-from ..dataset import read_data_files, UNetDataset
 
 
 class DividedGroupInference(BaseInference):
@@ -25,18 +25,23 @@ class DividedGroupInference(BaseInference):
 
             images_files, masks_files = read_data_files(div_dir, shuffle=False)
 
-            dataset = UNetDataset(images_files, masks_files,
-                                  self.config.data.img_size,
-                                  mean=self.config.data.mean,
-                                  std=self.config.data.std)
+            dataset = UNetDataset(
+                images_files,
+                masks_files,
+                self.config.data.img_size,
+                mean=self.config.data.mean,
+                std=self.config.data.std,
+            )
             dataloader = DataLoader(dataset, batch_size=8, pin_memory=True)
 
             infer_output = self.run_inference_loop(dataloader)
 
             # Define inference mode
-            print(f"{div_dir.parts[-1]} folder: "
-                  f"Inference time ({self.device.type})/image: "
-                  f"{infer_output['inference_time']:4f}")
+            print(
+                f"{div_dir.parts[-1]} folder: "
+                f"Inference time ({self.device.type})/image: "
+                f"{infer_output['inference_time']:4f}"
+            )
 
             # Define result directory
             out_path = self.results_path / div_dir.parts[-1]

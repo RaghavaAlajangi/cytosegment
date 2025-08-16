@@ -1,4 +1,4 @@
-from torch.optim import Adam, SGD
+from torch.optim import SGD, Adam
 
 
 def get_optimizer(config, model):
@@ -10,5 +10,8 @@ def get_optimizer(config, model):
         return Adam(model.parameters(), lr=learn_rate, eps=1e-07)
 
     if optimizer_name == "sgd":
-        return SGD(model.parameters(), lr=learn_rate,
-                   momentum=config.train.optimizer.momentum)
+        return SGD(
+            model.parameters(),
+            lr=learn_rate,
+            momentum=config.train.optimizer.momentum,
+        )

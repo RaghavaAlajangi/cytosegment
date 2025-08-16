@@ -9,12 +9,14 @@ def get_scheduler(config, optimizer):
     patience = config.train.scheduler.patience
 
     if scheduler_name == "steplr":
-        return lr_scheduler.StepLR(optimizer=optimizer,
-                                   step_size=lr_step_size,
-                                   gamma=lr_decay_rate)
+        return lr_scheduler.StepLR(
+            optimizer=optimizer, step_size=lr_step_size, gamma=lr_decay_rate
+        )
 
     if scheduler_name == "reducelronplateau":
-        return lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
-                                              mode="min",
-                                              patience=patience,
-                                              factor=lr_decay_rate)
+        return lr_scheduler.ReduceLROnPlateau(
+            optimizer=optimizer,
+            mode="min",
+            patience=patience,
+            factor=lr_decay_rate,
+        )

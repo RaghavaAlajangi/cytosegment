@@ -24,8 +24,10 @@ class EarlyStopping:
             self.best_score = score
         elif score < self.best_score:
             self.counter += 1
-            print(f"EarlyStopping counter: {self.counter} "
-                  f"out of {self.patience}")
+            print(
+                f"EarlyStopping counter: {self.counter} "
+                f"out of {self.patience}"
+            )
             if self.counter >= self.patience:
                 self.should_stop = True
         else:

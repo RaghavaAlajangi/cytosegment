@@ -1,20 +1,20 @@
 import copy
+import time
 from datetime import timedelta
 from pathlib import Path
-import time
 
 import numpy as np
 import torch
 
+from ..dataset import get_dataloaders
+from ..inferencing import DividedGroupInference, StandardInference
+from ..models import get_model
+from ..tracking import LocalTracker
 from .criterions import get_criterion
 from .early_stopping import EarlyStopping
 from .metrics import get_metric
 from .optimizers import get_optimizer
 from .schedulers import get_scheduler
-from ..dataset import get_dataloaders
-from ..models import get_model
-from ..tracking import LocalTracker
-from ..inferencing import StandardInference, DividedGroupInference
 
 
 class Trainer:
@@ -30,12 +30,15 @@ class Trainer:
 
         # Check if CUDA is available and assign the device
         self.device = torch.device(
-            "cuda" if config.use_cuda and torch.cuda.is_available() else "cpu")
+            "cuda" if config.use_cuda and torch.cuda.is_available() else "cpu"
+        )
 
         # Inform the user about cuda device availability
         if config.use_cuda and not torch.cuda.is_available():
-            print("Warning: No CUDA device available. Check your "
-                  "'cuda toolkit' and 'torch (cuda)' installations!")
+            print(
+                "Warning: No CUDA device available. Check your "
+                "'cuda toolkit' and 'torch (cuda)' installations!"
+            )
 
         print(f"Used device: {self.device}")
 
@@ -95,8 +98,10 @@ class Trainer:
 
     @staticmethod
     def get_model_name(epoch, train_acc, valid_acc):
-        return (f"E{epoch}_trainAcc_{int(train_acc * 1e4)}_"
-                f"validAcc_{int(valid_acc * 1e4)}")
+        return (
+            f"E{epoch}_trainAcc_{int(train_acc * 1e4)}_"
+            f"validAcc_{int(valid_acc * 1e4)}"
+        )
 
     def start_train(self):
         best_model = None
@@ -112,15 +117,18 @@ class Trainer:
             "img_size": self.config.data.img_size,
             "mean": self.dataloaders["train"].dataset.mean,
             "std": self.dataloaders["train"].dataset.std,
-            "padding_ufunc": "np.mean"
+            "padding_ufunc": "np.mean",
         }
 
         # Log sample counts
         for mode in ["train", "valid", "test"]:
-            self.tracker.log_param(f"{mode}_samples",
-                                   len(self.dataloaders[mode].dataset))
-            print(f"{mode.capitalize()} samples: "
-                  f"{len(self.dataloaders[mode].dataset)}")
+            self.tracker.log_param(
+                f"{mode}_samples", len(self.dataloaders[mode].dataset)
+            )
+            print(
+                f"{mode.capitalize()} samples: "
+                f"{len(self.dataloaders[mode].dataset)}"
+            )
         # Log epochs
         self.tracker.log_param("epochs", self.config.max_epochs)
 
@@ -136,12 +144,16 @@ class Trainer:
             self.tracker.log_metric("val_loss", valid_avg_loss)
             self.tracker.log_metric("val_acc", valid_avg_acc)
 
-            print(f"|Epochs-{epoch}/{self.config.max_epochs} | "
-                  f"lr:{dynamic_lr}|:")
-            print(f"|Train_Loss:{train_avg_loss:.4f} | "
-                  f"Train_Accuracy:{train_avg_acc:.4f} | "
-                  f"Valid_Loss:{valid_avg_loss:.4f} | "
-                  f"Valid_Accuracy:{valid_avg_acc:.4f}|")
+            print(
+                f"|Epochs-{epoch}/{self.config.max_epochs} | "
+                f"lr:{dynamic_lr}|:"
+            )
+            print(
+                f"|Train_Loss:{train_avg_loss:.4f} | "
+                f"Train_Accuracy:{train_avg_acc:.4f} | "
+                f"Valid_Loss:{valid_avg_loss:.4f} | "
+                f"Valid_Accuracy:{valid_avg_acc:.4f}|"
+            )
 
             # Reduce the learning rate, if validation accuracy is not improving
             if type(self.scheduler).__name__ == "StepLR":
@@ -166,17 +178,25 @@ class Trainer:
                 # Save the best model if:
                 # Validation accuracy is decreasing AND model has not been
                 # saved yet OR It is the last epoch.
-                if (valid_avg_acc < best_valid_acc and not model_saved or
-                        epoch == self.config.max_epochs):
-                    model_name = self.get_model_name(best_epoch,
-                                                     best_train_acc,
-                                                     best_valid_acc)
+                if (
+                    valid_avg_acc < best_valid_acc
+                    and not model_saved
+                    or epoch == self.config.max_epochs
+                ):
+                    model_name = self.get_model_name(
+                        best_epoch, best_train_acc, best_valid_acc
+                    )
 
-                    self.tracker.log_model(best_model, model_name, metadata,
-                                           self.config.data.img_size)
-                    self.tracker.log_metric("ckp_flags",
-                                            [best_epoch, best_valid_acc,
-                                             best_valid_loss])
+                    self.tracker.log_model(
+                        best_model,
+                        model_name,
+                        metadata,
+                        self.config.data.img_size,
+                    )
+                    self.tracker.log_metric(
+                        "ckp_flags",
+                        [best_epoch, best_valid_acc, best_valid_loss],
+                    )
 
                     # Ensure model is only saved once until accuracy improves
                     model_saved = True
@@ -203,10 +223,12 @@ class Trainer:
         print(f"Total training time: {train_time}")
 
         if self.tracker.best_model_path:
-            stand_inference = StandardInference(self.tracker.best_model_path,
-                                                self.dataloaders["test"],
-                                                self.exp_path,
-                                                use_cuda=False)
+            stand_inference = StandardInference(
+                self.tracker.best_model_path,
+                self.dataloaders["test"],
+                self.exp_path,
+                use_cuda=False,
+            )
             test_results = stand_inference.run(save_plots=True)
 
             self.tracker.log_param("inference_cpu", test_results[0])
@@ -214,10 +236,12 @@ class Trainer:
             self.tracker.log_param("test_dice_mean", test_results[2])
 
             # Testing divided groups with CPU device
-            div_inference = DividedGroupInference(self.tracker.best_model_path,
-                                                  self.config,
-                                                  self.exp_path,
-                                                  use_cuda=False)
+            div_inference = DividedGroupInference(
+                self.tracker.best_model_path,
+                self.config,
+                self.exp_path,
+                use_cuda=False,
+            )
             div_inference.run(save_plots=True)
 
             # Run inference using gpu only it is available

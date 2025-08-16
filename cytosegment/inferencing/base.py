@@ -1,12 +1,13 @@
-from ast import literal_eval as asteval
 import csv
 import time
+from ast import literal_eval as asteval
 
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from skimage.measure import find_contours
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+from skimage.measure import find_contours
+
 from ..training.metrics import DiceCoeff, IoUCoeff
 
 
@@ -33,8 +34,9 @@ def load_model(jit_model_path, device):
     # Define a mapping dict to load model metadata
     extra_files = {"meta": ""}
     # Load model and its metadata
-    model_jit = torch.jit.load(jit_model_path, _extra_files=extra_files,
-                               map_location=device)
+    model_jit = torch.jit.load(
+        jit_model_path, _extra_files=extra_files, map_location=device
+    )
     model_meta = None
     # check if model checkpoint has any metadata
     if extra_files["meta"]:
@@ -61,7 +63,8 @@ class BaseInference:
         self.jit_model_path = jit_model_path
         self._use_cuda = use_cuda
         self.device = torch.device(
-            "cuda" if use_cuda and torch.cuda.is_available() else "cpu")
+            "cuda" if use_cuda and torch.cuda.is_available() else "cpu"
+        )
         self.model, _ = load_model(jit_model_path, self.device)
 
         # Define metrics
@@ -77,7 +80,8 @@ class BaseInference:
         """When use_cuda changes device and model attributes get updated."""
         self._use_cuda = value
         self.device = torch.device(
-            "cuda" if self._use_cuda and torch.cuda.is_available() else "cpu")
+            "cuda" if self._use_cuda and torch.cuda.is_available() else "cpu"
+        )
         self.model, _ = load_model(self.jit_model_path, self.device)
 
     def run_inference_loop(self, dataloader):
@@ -128,15 +132,17 @@ class BaseInference:
             "iou": iou_scores,
             "dice": dice_scores,
             # Return test image file names (useful for plotting)
-            "image_names": image_file_names
+            "image_names": image_file_names,
         }
 
     @staticmethod
     def save_metrics(inference_output, out_path):
         """Dump inference scores to a CSV."""
-        scores = {"image_names": inference_output["image_names"],
-                  "iou_scores": inference_output["iou"],
-                  "dice_scores": inference_output["dice"]}
+        scores = {
+            "image_names": inference_output["image_names"],
+            "iou_scores": inference_output["iou"],
+            "dice_scores": inference_output["dice"],
+        }
         with open(out_path / "test_scores.csv", "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(scores.keys())

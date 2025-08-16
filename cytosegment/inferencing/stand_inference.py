@@ -12,8 +12,10 @@ class StandardInference(BaseInference):
         infer_output = self.run_inference_loop(self.dataloader)
 
         # Define inference mode
-        print(f"Testing folder: Inference time ({self.device.type})/image: "
-              f"{infer_output['inference_time']:4f}")
+        print(
+            f"Testing folder: Inference time ({self.device.type})/image: "
+            f"{infer_output['inference_time']:4f}"
+        )
 
         if save_plots:
             # Define result directory

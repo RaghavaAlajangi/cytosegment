@@ -1,12 +1,12 @@
-from pathlib import Path
-from PIL import Image
 import random
+from pathlib import Path
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms as tt
 import torchvision.transforms.functional as tf
+from PIL import Image
+from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms as tt
 
 from .helper import read_data_files, split_data
 
@@ -23,38 +23,52 @@ def get_dataloaders(config):
             "'/testing' subdirectories."
         )
 
-    train_images, train_masks = read_data_files(data_path / "training",
-                                                seed=config.data.random_seed,
-                                                shuffle=True)
-    test_images, test_masks = read_data_files(data_path / "testing",
-                                              seed=42,
-                                              shuffle=False)
+    train_images, train_masks = read_data_files(
+        data_path / "training", seed=config.data.random_seed, shuffle=True
+    )
+    test_images, test_masks = read_data_files(
+        data_path / "testing", seed=42, shuffle=False
+    )
 
     train_images, valid_images, train_masks, valid_masks = split_data(
-        train_images, train_masks, config.data.valid_size)
+        train_images, train_masks, config.data.valid_size
+    )
 
     datasets = {
-        "train": UNetDataset(train_images, train_masks,
-                             img_size=config.data.img_size,
-                             augment=config.data.augmentation,
-                             mean=config.data.mean,
-                             std=config.data.std),
-        "valid": UNetDataset(valid_images, valid_masks,
-                             img_size=config.data.img_size,
-                             augment=False,
-                             mean=config.data.mean,
-                             std=config.data.std),
-        "test": UNetDataset(test_images, test_masks,
-                            img_size=config.data.img_size,
-                            augment=False,
-                            mean=config.data.mean,
-                            std=config.data.std)
+        "train": UNetDataset(
+            train_images,
+            train_masks,
+            img_size=config.data.img_size,
+            augment=config.data.augmentation,
+            mean=config.data.mean,
+            std=config.data.std,
+        ),
+        "valid": UNetDataset(
+            valid_images,
+            valid_masks,
+            img_size=config.data.img_size,
+            augment=False,
+            mean=config.data.mean,
+            std=config.data.std,
+        ),
+        "test": UNetDataset(
+            test_images,
+            test_masks,
+            img_size=config.data.img_size,
+            augment=False,
+            mean=config.data.mean,
+            std=config.data.std,
+        ),
     }
 
     dataloaders = {
-        name: DataLoader(dataset, batch_size=config.data.batch_size,
-                         num_workers=config.data.num_workers, pin_memory=True,
-                         shuffle=name == "train")
+        name: DataLoader(
+            dataset,
+            batch_size=config.data.batch_size,
+            num_workers=config.data.num_workers,
+            pin_memory=True,
+            shuffle=name == "train",
+        )
         for name, dataset in datasets.items()
     }
 
@@ -62,17 +76,25 @@ def get_dataloaders(config):
 
 
 class UNetDataset(Dataset):
-    """ Create torch dataset instance for training"""
+    """Create torch dataset instance for training"""
 
-    def __init__(self, image_paths, maks_paths, img_size, augment=False,
-                 min_max=False, mean=None, std=None):
+    def __init__(
+        self,
+        image_paths,
+        maks_paths,
+        img_size,
+        augment=False,
+        min_max=False,
+        mean=None,
+        std=None,
+    ):
         self.image_paths = image_paths
         self.mask_paths = maks_paths
         self.img_size = img_size
         self.augment = augment
         self.min_max = min_max
-        self.mean = 0. if mean is None else mean
-        self.std = 1. if std is None else std
+        self.mean = 0.0 if mean is None else mean
+        self.std = 1.0 if std is None else std
 
     @staticmethod
     def min_max_norm(img):
@@ -98,29 +120,32 @@ class UNetDataset(Dataset):
         # Adjust image height (crop or pad according to the target height)
         if hdiff > 0:
             # Cropping
-            hcorr_img = image[hcorr: height - hcorr, :]
-            hcorr_msk = mask[hcorr: height - hcorr, :]
+            hcorr_img = image[hcorr : height - hcorr, :]  # noqa
+            hcorr_msk = mask[hcorr : height - hcorr, :]  # noqa
         else:
             # Padding
-            hcorr_img = np.full((target_height, width), pad_value,
-                                dtype=np.float32)
+            hcorr_img = np.full(
+                (target_height, width), pad_value, dtype=np.float32
+            )
             hcorr_msk = np.zeros((target_height, width), dtype=np.float32)
-            hcorr_img[hcorr:hcorr + height, :] = image
-            hcorr_msk[hcorr:hcorr + height, :] = mask
+            hcorr_img[hcorr : hcorr + height, :] = image  # noqa
+            hcorr_msk[hcorr : hcorr + height, :] = mask  # noqa
 
         # Adjust image width (crop or pad according to the target width)
         if wdiff > 0:
             # Cropping
-            wcorr_img = hcorr_img[:, wcorr: width - wcorr]
-            wcorr_msk = hcorr_msk[:, wcorr: width - wcorr]
+            wcorr_img = hcorr_img[:, wcorr : width - wcorr]  # noqa
+            wcorr_msk = hcorr_msk[:, wcorr : width - wcorr]  # noqa
         else:
             # Padding
-            wcorr_img = np.full((target_height, target_width), pad_value,
-                                dtype=np.float32)
-            wcorr_msk = np.zeros((target_height, target_width),
-                                 dtype=np.float32)
-            wcorr_img[:, wcorr:wcorr + width] = hcorr_img
-            wcorr_msk[:, wcorr:wcorr + width] = hcorr_msk
+            wcorr_img = np.full(
+                (target_height, target_width), pad_value, dtype=np.float32
+            )
+            wcorr_msk = np.zeros(
+                (target_height, target_width), dtype=np.float32
+            )
+            wcorr_img[:, wcorr : wcorr + width] = hcorr_img  # noqa
+            wcorr_msk[:, wcorr : wcorr + width] = hcorr_msk  # noqa
 
         return wcorr_img, wcorr_msk
 
@@ -173,8 +198,9 @@ class UNetDataset(Dataset):
         pad_value = image.mean()
 
         # Resize the image and mask sample according to the target shape
-        resized_img, resized_msk = self.resize_sample(image, mask,
-                                                      pad_value=pad_value)
+        resized_img, resized_msk = self.resize_sample(
+            image, mask, pad_value=pad_value
+        )
         # Augmentation
         aug_img, aug_msk = self.custom_transform(resized_img, resized_msk)
 

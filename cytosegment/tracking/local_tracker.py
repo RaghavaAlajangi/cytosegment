@@ -1,14 +1,14 @@
 import csv
 from pathlib import Path
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import yaml
 
-from .base import BaseTracker
 from ..models import summary
 from ..tools import rename_ckp_path_with_md5
+from .base import BaseTracker
 
 
 class LocalTracker(BaseTracker):
@@ -41,8 +41,9 @@ class LocalTracker(BaseTracker):
         """Save a PyTorch model in ONNX format."""
         batch_size = 8
         # Input to the model
-        dummy_input = torch.randn(batch_size, 1, img_size[0], img_size[1],
-                                  requires_grad=True)
+        dummy_input = torch.randn(
+            batch_size, 1, img_size[0], img_size[1], requires_grad=True
+        )
         torch.onnx.export(
             model.cpu(),  # model being run
             # model input (or a tuple for multiple inputs)
@@ -60,16 +61,15 @@ class LocalTracker(BaseTracker):
             # the model's output names
             output_names=["output"],
             # variable length axes
-            dynamic_axes={"input": {0: "batch_size"},
-                          "output": {0: "batch_size"}}
+            dynamic_axes={
+                "input": {0: "batch_size"},
+                "output": {0: "batch_size"},
+            },
         )
 
     def dump_logs(self):
         """Save training logs as a yaml file."""
-        logs = {
-            "params": self.params,
-            "metrics": self.metrics
-        }
+        logs = {"params": self.params, "metrics": self.metrics}
         with open(self.exp_dir / "train_logs.yaml", "w") as f:
             yaml.dump(logs, f, default_flow_style=False, sort_keys=False)
 
@@ -132,13 +132,30 @@ class LocalTracker(BaseTracker):
         plt.figure(figsize=(14, 7), facecolor=(1, 1, 1))
         plt.rc("grid", linestyle="--", color="lightgrey")
         plt.subplot(121)
-        plt.plot(epochs, self.metrics["train_acc"], color="red",
-                 label="Train accuracy", zorder=1)
-        plt.plot(epochs, self.metrics["val_acc"], color="green",
-                 label="Valid accuracy", zorder=2)
+        plt.plot(
+            epochs,
+            self.metrics["train_acc"],
+            color="red",
+            label="Train accuracy",
+            zorder=1,
+        )
+        plt.plot(
+            epochs,
+            self.metrics["val_acc"],
+            color="green",
+            label="Valid accuracy",
+            zorder=2,
+        )
         if len(ckp_epochs) > 1:
-            plt.scatter(ckp_epochs, ckp_val_acc, c="blue", s=20, marker="x",
-                        label=f"Saved_ckp(>={self.min_ckp_acc:.2f})", zorder=3)
+            plt.scatter(
+                ckp_epochs,
+                ckp_val_acc,
+                c="blue",
+                s=20,
+                marker="x",
+                label=f"Saved_ckp(>={self.min_ckp_acc:.2f})",
+                zorder=3,
+            )
         plt.legend(loc="lower right")
         plt.title("Accuracy plot")
         plt.xlabel("Epochs")
@@ -146,13 +163,30 @@ class LocalTracker(BaseTracker):
         plt.ylim(0.3, 1.1)
         plt.grid()
         plt.subplot(122)
-        plt.plot(epochs, self.metrics["train_loss"], color="red",
-                 label="Train loss", zorder=1)
-        plt.plot(epochs, self.metrics["val_loss"], color="green",
-                 label="Valid loss", zorder=2)
+        plt.plot(
+            epochs,
+            self.metrics["train_loss"],
+            color="red",
+            label="Train loss",
+            zorder=1,
+        )
+        plt.plot(
+            epochs,
+            self.metrics["val_loss"],
+            color="green",
+            label="Valid loss",
+            zorder=2,
+        )
         if len(early_stop_epoch) == 1:
-            plt.scatter(early_stop_epoch, ckp_val_loss, c="blue", s=20,
-                        marker="x", label="Early_stopping", zorder=3)
+            plt.scatter(
+                early_stop_epoch,
+                ckp_val_loss,
+                c="blue",
+                s=20,
+                marker="x",
+                label="Early_stopping",
+                zorder=3,
+            )
         plt.legend(loc="upper right")
         plt.title("Loss plot")
         plt.xlabel("Epochs")

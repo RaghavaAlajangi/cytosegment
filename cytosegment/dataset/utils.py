@@ -6,7 +6,7 @@ from .manager import UNetDataset
 
 
 def compute_data_mean_std(data_path, img_size):
-    """ Computes the mean and standard deviation of a dataset.
+    """Computes the mean and standard deviation of a dataset.
 
     Parameters
     ----------
@@ -20,10 +20,12 @@ def compute_data_mean_std(data_path, img_size):
     -------
     The mean and standard deviation of the training data
     """
-    image_files, mask_files = read_data_files(data_path, seed=42,
-                                              shuffle=False)
-    dataset = UNetDataset(image_files, mask_files, target_shape=img_size,
-                          augment=False)
+    image_files, mask_files = read_data_files(
+        data_path, seed=42, shuffle=False
+    )
+    dataset = UNetDataset(
+        image_files, mask_files, target_shape=img_size, augment=False
+    )
 
     dataloader = DataLoader(dataset, batch_size=32, pin_memory=True)
 
@@ -36,9 +38,12 @@ def compute_data_mean_std(data_path, img_size):
         batch_std = torch.std(images, dim=[0, 2, 3])
 
         num_samples += images.shape[0]
-        mean = (mean * (num_samples - images.shape[0]) + batch_mean *
-                images.shape[0]) / num_samples
-        std = (std * (num_samples - images.shape[0]) + batch_std *
-               images.shape[0]) / num_samples
+        mean = (
+            mean * (num_samples - images.shape[0])
+            + batch_mean * images.shape[0]
+        ) / num_samples
+        std = (
+            std * (num_samples - images.shape[0]) + batch_std * images.shape[0]
+        ) / num_samples
 
     return mean.item(), std.item()
