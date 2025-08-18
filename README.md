@@ -1,8 +1,8 @@
 # CytoSegment
 
 
-[![Pipeline](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml/badge.svg)](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml)_
-[![codecov](https://codecov.io/gh/RaghavaAlajangi/cytosegment/branch/main/graph/badge.svg?token=Z4FAPNDJWN)](https://codecov.io/gh/RaghavaAlajangi/cytosegment)_
+[![Pipeline](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml/badge.svg)](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml)
+[![codecov](https://codecov.io/gh/RaghavaAlajangi/cytosegment/branch/main/graph/badge.svg?token=Z4FAPNDJWN)](https://codecov.io/gh/RaghavaAlajangi/cytosegment)
 [![DOI](https://zenodo.org/badge/DOI/10.1002/cyto.a.24947.svg)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)
 
 
@@ -17,7 +17,6 @@
 * Supports multi-run experiments with parameter sweeps
 * Optimized for cytometry and microorganism image datasets
 
----
 
 ## 📄 Citation
 
@@ -45,9 +44,7 @@ abstract = {ABSTRACT Imaging flow cytometry requires rapid and accurate segmenta
 year = {2025}
 }
 
-
 ```
-
 
 ## 📦 Installation
 
@@ -65,8 +62,6 @@ pip install .
 # Or install in development mode
 pip install -e .
 ```
-
----
 
 ## 🗂 Dataset Structure
 
@@ -90,8 +85,6 @@ dataset_root/
         └── ...
 ```
 
----
-
 ## ⚡ Quick Start
 
 Run training jobs with simple CLI commands:
@@ -113,20 +106,15 @@ cytosegment -m train.optimizer.learn_rate=0.01,0.02,0.03
 cytosegment -m slurm=true train.optimizer.learn_rate=0.01,0.02,0.03
 ```
 
----
-
 ## 📚 Documentation
 
 Paper: [Cytometry Part A (2025)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)  
 Code: [Original GitHub Repo](https://github.com/RaghavaAlajangi/CytoSegment-PyTorch)
 
----
-
 ## 🤝 Contributing
 
 Feel free to open issues or submit pull requests. Contributions are welcome!
 
----
 
 ## 📜 License
 
