@@ -1,7 +1,7 @@
 # CytoSegment
 
 
-[![Pipeline](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml/badge.svg)](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/cicd.yml)
+[![Pipeline](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/ci.yml/badge.svg)](https://github.com/RaghavaAlajangi/cytosegment/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/RaghavaAlajangi/cytosegment/branch/main/graph/badge.svg?token=Z4FAPNDJWN)](https://codecov.io/gh/RaghavaAlajangi/cytosegment)
 [![DOI](https://zenodo.org/badge/DOI/10.1002/cyto.a.24947.svg)](https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.24947)
 
